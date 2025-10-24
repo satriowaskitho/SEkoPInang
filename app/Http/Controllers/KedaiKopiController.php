@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
-
 class KedaiKopiController extends Controller
 {
     /**
@@ -50,6 +49,11 @@ class KedaiKopiController extends Controller
             $query->withLocation();
         }
 
+        // Filter by sumber - TAMBAHAN BARU
+        if ($request->filled('sumber')) {
+            $query->bySumber($request->sumber);
+        }
+
         $kedaiKopi = $query->latest()->paginate(10);
 
         return view('kedai-kopi.index', compact('kedaiKopi'));
@@ -62,7 +66,7 @@ class KedaiKopiController extends Controller
      */
     public function create()
     {
-        return view('form'); // Test dengan welcome dulu
+        return view('form');
     }
 
     /**
@@ -78,43 +82,61 @@ class KedaiKopiController extends Controller
 
         try {
             $validated = $request->validate([
+                // Required fields (yang tetap wajib)
                 'kode_kecamatan' => 'required|in:010,020,030,040',
                 'kode_kelurahan' => 'required|string|max:3',
-                'rw' => 'required|string|max:3',
-                'rt' => 'required|string|max:3',
                 'alamat' => 'required|string|max:500',
-                'latitude' => 'nullable|numeric|between:-90,90',
-                'longitude' => 'nullable|numeric|between:-180,180',
+                'latitude' => 'required|numeric|between:-90,90', // Latitude wajib
+                'longitude' => 'required|numeric|between:-180,180', // Longitude wajib
                 'nama_kedai' => 'required|string|max:255',
+
+                // Previously optional fields - NOW REQUIRED AGAIN
                 'nama_pemilik' => 'required|string|max:255',
                 'jenis_kelamin' => 'required|in:L,P',
                 'handphone' => 'required|string|min:10|max:20',
                 'omzet' => 'required|string',
                 'jumlah_pekerja' => 'required|integer|min:1',
                 'stan_sewa' => 'required|integer|min:0',
+                'tren_pekerja' => 'required|string|in:naik,turun,tetap',
+                'sumber' => 'required|string|in:mandiri,mitra', // TAMBAHAN BARU
+
+                // Still optional fields
+                'rw' => 'nullable|string|max:3',
+                'rt' => 'nullable|string|max:3',
                 'catatan' => 'nullable|string|max:1000',
-                'tren_pekerja' => 'required|string|in:naik,turun,tetap'
             ], [
+                // Required fields validation messages
                 'kode_kecamatan.required' => 'Kecamatan wajib dipilih',
                 'kode_kecamatan.in' => 'Kecamatan tidak valid',
                 'kode_kelurahan.required' => 'Kelurahan wajib dipilih',
-                'rw.required' => 'RW wajib diisi',
-                'rt.required' => 'RT wajib diisi',
                 'alamat.required' => 'Alamat kedai wajib diisi',
+                'latitude.required' => 'Lokasi GPS wajib dikonfirmasi',
+                'latitude.numeric' => 'Latitude harus berupa angka',
+                'latitude.between' => 'Latitude tidak valid',
+                'longitude.required' => 'Lokasi GPS wajib dikonfirmasi',
+                'longitude.numeric' => 'Longitude harus berupa angka',
+                'longitude.between' => 'Longitude tidak valid',
                 'nama_kedai.required' => 'Nama kedai wajib diisi',
+
+                // Previously optional fields - NOW REQUIRED
                 'nama_pemilik.required' => 'Nama pemilik wajib diisi',
+                'nama_pemilik.max' => 'Nama pemilik maksimal 255 karakter',
                 'jenis_kelamin.required' => 'Jenis kelamin wajib dipilih',
                 'jenis_kelamin.in' => 'Jenis kelamin tidak valid',
                 'handphone.required' => 'Nomor handphone wajib diisi',
                 'handphone.min' => 'Nomor handphone minimal 10 digit',
                 'handphone.max' => 'Nomor handphone maksimal 20 digit',
-                'omzet.required' => 'Omzet wajib diisi',
+                'omzet.required' => 'Rata-rata omzet wajib diisi',
                 'jumlah_pekerja.required' => 'Jumlah pekerja wajib diisi',
+                'jumlah_pekerja.integer' => 'Jumlah pekerja harus berupa angka',
                 'jumlah_pekerja.min' => 'Jumlah pekerja minimal 1 orang',
                 'stan_sewa.required' => 'Jumlah stan sewa wajib diisi',
+                'stan_sewa.integer' => 'Jumlah stan sewa harus berupa angka',
                 'stan_sewa.min' => 'Jumlah stan sewa tidak boleh kurang dari 0',
                 'tren_pekerja.required' => 'Tren pekerja wajib dipilih',
                 'tren_pekerja.in' => 'Tren pekerja tidak valid',
+                'sumber.required' => 'Sumber data wajib diisi', // TAMBAHAN BARU
+                'sumber.in' => 'Sumber data tidak valid', // TAMBAHAN BARU
             ]);
 
             Log::info('Data setelah validasi:', $validated);
@@ -122,8 +144,7 @@ class KedaiKopiController extends Controller
             DB::beginTransaction();
 
             // Process omzet - remove 'Rp' and dots, convert to integer
-            $omzetValue = $validated['omzet'];
-            $omzetValue = str_replace(['Rp', '.', ' '], '', $omzetValue);
+            $omzetValue = str_replace(['Rp', '.', ' '], '', $validated['omzet']);
             $omzetValue = (int) $omzetValue;
 
             Log::info('Omzet setelah diproses:', ['original' => $validated['omzet'], 'processed' => $omzetValue]);
@@ -133,8 +154,18 @@ class KedaiKopiController extends Controller
             $data['omzet'] = $omzetValue;
             $data['kode_kota'] = '2172'; // Default for Tanjungpinang
 
-            // Remove total_stan dari data jika ada (karena tidak ada di fillable)
-            unset($data['total_stan']);
+            // Handle RT/RW - set default value jika kosong (these remain optional)
+            if (empty($data['rt']) || $data['rt'] === '') {
+                $data['rt'] = '000'; // Default value
+            }
+            if (empty($data['rw']) || $data['rw'] === '') {
+                $data['rw'] = '000'; // Default value
+            }
+
+            // Handle optional catatan field
+            if (empty($data['catatan']) || $data['catatan'] === '') {
+                $data['catatan'] = null;
+            }
 
             Log::info('Data yang akan disimpan:', $data);
 
@@ -204,34 +235,52 @@ class KedaiKopiController extends Controller
     {
         try {
             $validated = $request->validate([
+                // Required fields (yang tetap wajib)
                 'kode_kecamatan' => 'required|in:010,020,030,040',
                 'kode_kelurahan' => 'required|string|max:3',
-                'rw' => 'required|string|max:3',
-                'rt' => 'required|string|max:3',
                 'alamat' => 'required|string|max:500',
-                'latitude' => 'nullable|numeric|between:-90,90',
-                'longitude' => 'nullable|numeric|between:-180,180',
+                'latitude' => 'nullable|numeric|between:-90,90', // Update bisa nullable
+                'longitude' => 'nullable|numeric|between:-180,180', // Update bisa nullable
                 'nama_kedai' => 'required|string|max:255',
+
+                // Previously optional fields - NOW REQUIRED AGAIN
                 'nama_pemilik' => 'required|string|max:255',
                 'jenis_kelamin' => 'required|in:L,P',
                 'handphone' => 'required|string|min:10|max:20',
                 'omzet' => 'required|string',
                 'jumlah_pekerja' => 'required|integer|min:1',
                 'stan_sewa' => 'required|integer|min:0',
-                'catatan' => 'nullable|string|max:1000',
                 'tren_pekerja' => 'required|string|in:naik,turun,tetap',
+                'sumber' => 'required|string|in:mandiri,mitra', // TAMBAHAN BARU
+
+                // Still optional fields
+                'rw' => 'nullable|string|max:3',
+                'rt' => 'nullable|string|max:3',
+                'catatan' => 'nullable|string|max:1000',
             ]);
 
             DB::beginTransaction();
 
             // Process omzet - remove 'Rp' and dots, convert to integer
-            $omzetValue = $validated['omzet'];
-            $omzetValue = str_replace(['Rp', '.', ' '], '', $omzetValue);
+            $omzetValue = str_replace(['Rp', '.', ' '], '', $validated['omzet']);
             $omzetValue = (int) $omzetValue;
 
             // Prepare data for updating
             $data = $validated;
             $data['omzet'] = $omzetValue;
+
+            // Handle RT/RW - set default value jika kosong (these remain optional)
+            if (empty($data['rt']) || $data['rt'] === '') {
+                $data['rt'] = '000'; // Default value
+            }
+            if (empty($data['rw']) || $data['rw'] === '') {
+                $data['rw'] = '000'; // Default value
+            }
+
+            // Handle optional catatan field
+            if (empty($data['catatan']) || $data['catatan'] === '') {
+                $data['catatan'] = null;
+            }
 
             // Update the record
             $kedaiKopi->update($data);
@@ -314,6 +363,207 @@ class KedaiKopiController extends Controller
     }
 
     /**
+     * Display public monitoring dashboard - ONLY MANDIRI DATA.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function monitor(Request $request)
+    {
+        // Get statistics using mandiri-only method
+        $stats = $this->getStatisticsForMonitor();
+        $totalKedai = $stats['total_kedai'];
+        $totalPekerja = $stats['total_pekerja'];
+        $avgOmzet = $stats['avg_omzet'];
+        $kedaiWithLocation = $stats['kedai_with_location'];
+        $kedaiByKecamatan = $stats['kedai_by_kecamatan'];
+
+        $kecamatanNames = [
+            '010' => 'Bukit Bestari',
+            '020' => 'Tanjungpinang Timur',
+            '030' => 'Tanjungpinang Kota',
+            '040' => 'Tanjungpinang Barat',
+        ];
+
+        $progressVerifikasi = $kedaiWithLocation > 0 && $totalKedai > 0 ?
+            ($kedaiWithLocation / $totalKedai) * 100 : 0;
+        $tanpaLokasi = $totalKedai - $kedaiWithLocation;
+
+        // Ensure all filter parameters are strings (not arrays)
+        $search = $this->ensureString($request->get('search'));
+        $kecamatan = $this->ensureString($request->get('kecamatan'));
+        $kelurahan = $this->ensureString($request->get('kelurahan'));
+        $lokasi = $this->ensureString($request->get('lokasi'));
+        // Removed sumber filter since we only show mandiri data
+        $sortBy = $this->ensureString($request->get('sort', 'created_at'));
+        $sortDir = $this->ensureString($request->get('direction', 'desc'));
+        $currentPage = (int) $request->get('page', 1);
+        $perPage = 15; // Sedikit lebih kecil untuk public
+
+        // Query dengan filter dan sort (PUBLIC VERSION - ONLY MANDIRI DATA)
+        $query = KedaiKopi::select([
+            'id',
+            'nama_kedai',
+            'kode_kecamatan',
+            'kode_kelurahan',
+            'rt',
+            'rw',
+            'alamat',
+            'latitude',
+            'longitude',
+            'omzet',
+            'jumlah_pekerja',
+            'stan_sewa',
+            'created_at',
+            'catatan',
+            'jenis_kelamin',
+            'sumber'
+            // Exclude: nama_pemilik, handphone (sensitive data)
+        ])->where('sumber', 'mandiri'); // ONLY MANDIRI DATA
+
+        // Apply same filters as dashboard (except sumber)
+        if ($search) {
+            $query->where('nama_kedai', 'like', "%{$search}%");
+            // Remove nama_pemilik search for privacy
+        }
+
+        if ($kecamatan) {
+            $query->where('kode_kecamatan', $kecamatan);
+        }
+
+        if ($kelurahan) {
+            $query->where('kode_kelurahan', $kelurahan);
+        }
+
+        if ($lokasi !== '') {
+            if ($lokasi == '1') {
+                $query->whereNotNull('latitude')->whereNotNull('longitude');
+            } else {
+                $query->where(function ($q) {
+                    $q->whereNull('latitude')->orWhereNull('longitude');
+                });
+            }
+        }
+
+        // Apply sorting
+        $validSorts = ['nama_kedai', 'omzet', 'jumlah_pekerja', 'stan_sewa', 'created_at'];
+        if (in_array($sortBy, $validSorts)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        // Get all filtered data for manual pagination
+        $allFilteredData = $query->get();
+        $totalFiltered = $allFilteredData->count();
+
+        // Manual pagination
+        $offset = ($currentPage - 1) * $perPage;
+        $currentPageData = $allFilteredData->slice($offset, $perPage);
+
+        // Calculate pagination info
+        $totalPages = ceil($totalFiltered / $perPage);
+        $hasPages = $totalPages > 1;
+
+        // Add computed properties to each item
+        $currentPageData = $currentPageData->map(function ($kedai) use ($kecamatanNames) {
+            // Add kecamatan name
+            $kedai->kecamatan_name = $kecamatanNames[$kedai->kode_kecamatan] ?? 'Unknown';
+
+            // Add kelurahan name (you might want to create a helper for this)
+            $kedai->kelurahan_name = $this->getKelurahanName($kedai->kode_kecamatan, $kedai->kode_kelurahan);
+
+            // Format omzet - handle null values
+            $kedai->formatted_omzet = $kedai->omzet > 0 ?
+                'Rp ' . number_format($kedai->omzet, 0, ',', '.') : 'Tidak diisi';
+
+            // Gender text - handle null values
+            $kedai->gender_text = $kedai->jenis_kelamin ?
+                ($kedai->jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan') : 'Tidak diisi';
+
+            // Sumber text - always mandiri for monitor
+            $kedai->sumber_text = 'Input Mandiri';
+
+            return $kedai;
+        });
+
+        // Get latest data update timestamp from MANDIRI data only
+        $latestDataUpdate = KedaiKopi::where('sumber', 'mandiri')->latest('created_at')->first();
+        $lastUpdateTime = $latestDataUpdate ? $latestDataUpdate->created_at : null;
+
+        return view('monitor', compact(
+            'totalKedai',
+            'totalPekerja',
+            'avgOmzet',
+            'kedaiWithLocation',
+            'kedaiByKecamatan',
+            'kecamatanNames',
+            'progressVerifikasi',
+            'tanpaLokasi',
+            'search',
+            'kecamatan',
+            'kelurahan',
+            'lokasi',
+            // Removed 'sumber' since we only show mandiri
+            'sortBy',
+            'sortDir',
+            'currentPage',
+            'perPage',
+            'totalFiltered',
+            'currentPageData',
+            'totalPages',
+            'hasPages',
+            'lastUpdateTime'
+        ));
+    }
+
+    /**
+     * Get statistics for public monitor (MANDIRI DATA ONLY).
+     *
+     * @return array
+     */
+    public function getStatisticsForMonitor()
+    {
+        $stats = [
+            'total_kedai' => KedaiKopi::where('sumber', 'mandiri')->count(),
+            'total_pekerja' => KedaiKopi::where('sumber', 'mandiri')->whereNotNull('jumlah_pekerja')->sum('jumlah_pekerja'),
+            'total_omzet' => KedaiKopi::where('sumber', 'mandiri')->whereNotNull('omzet')->sum('omzet'),
+            'total_stan_sewa' => KedaiKopi::where('sumber', 'mandiri')->whereNotNull('stan_sewa')->sum('stan_sewa'),
+            'avg_omzet' => KedaiKopi::where('sumber', 'mandiri')->whereNotNull('omzet')->where('omzet', '>', 0)->avg('omzet'),
+            'avg_pekerja' => KedaiKopi::where('sumber', 'mandiri')->whereNotNull('jumlah_pekerja')->where('jumlah_pekerja', '>', 0)->avg('jumlah_pekerja'),
+            'kedai_by_kecamatan' => KedaiKopi::where('sumber', 'mandiri')->selectRaw('kode_kecamatan, COUNT(*) as total')
+                ->groupBy('kode_kecamatan')
+                ->get(),
+            'kedai_with_location' => KedaiKopi::where('sumber', 'mandiri')
+                ->whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->count(),
+            // Only mandiri stats for monitor
+            'kedai_mandiri' => KedaiKopi::where('sumber', 'mandiri')->count(),
+            'kedai_mitra' => 0, // Not shown in monitor but kept for compatibility
+        ];
+
+        return $stats;
+    }
+    /**
+     * Ensure the parameter is a string, not an array
+     *
+     * @param  mixed  $value
+     * @return string
+     */
+    private function ensureString($value)
+    {
+        if (is_array($value)) {
+            // If it's an array, take the first element or return empty string
+            return !empty($value) ? (string) $value[0] : '';
+        }
+
+        if (is_null($value)) {
+            return '';
+        }
+
+        return (string) $value;
+    }
+
+    /**
      * Get statistics for dashboard.
      *
      * @return array
@@ -322,17 +572,246 @@ class KedaiKopiController extends Controller
     {
         $stats = [
             'total_kedai' => KedaiKopi::count(),
-            'total_pekerja' => KedaiKopi::sum('jumlah_pekerja'),
-            'total_omzet' => KedaiKopi::sum('omzet'),
-            'total_stan_sewa' => KedaiKopi::sum('stan_sewa'),
-            'avg_omzet' => KedaiKopi::avg('omzet'),
-            'avg_pekerja' => KedaiKopi::avg('jumlah_pekerja'),
+            'total_pekerja' => KedaiKopi::whereNotNull('jumlah_pekerja')->sum('jumlah_pekerja'),
+            'total_omzet' => KedaiKopi::whereNotNull('omzet')->sum('omzet'),
+            'total_stan_sewa' => KedaiKopi::whereNotNull('stan_sewa')->sum('stan_sewa'),
+            'avg_omzet' => KedaiKopi::whereNotNull('omzet')->where('omzet', '>', 0)->avg('omzet'),
+            'avg_pekerja' => KedaiKopi::whereNotNull('jumlah_pekerja')->where('jumlah_pekerja', '>', 0)->avg('jumlah_pekerja'),
             'kedai_by_kecamatan' => KedaiKopi::selectRaw('kode_kecamatan, COUNT(*) as total')
                 ->groupBy('kode_kecamatan')
                 ->get(),
-            'kedai_with_location' => KedaiKopi::withLocation()->count(),
+            'kedai_with_location' => KedaiKopi::whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->count(),
+            // TAMBAHAN BARU - Stats berdasarkan sumber
+            'kedai_by_sumber' => KedaiKopi::selectRaw('sumber, COUNT(*) as total')
+                ->groupBy('sumber')
+                ->get(),
+            'kedai_mandiri' => KedaiKopi::where('sumber', 'mandiri')->count(),
+            'kedai_mitra' => KedaiKopi::where('sumber', 'mitra')->count(),
         ];
 
         return $stats;
+    }
+
+    /**
+     * Helper method to get kelurahan name
+     * @param string $kecamatanCode
+     * @param string $kelurahanCode
+     * @return string
+     */
+    private function getKelurahanName($kecamatanCode, $kelurahanCode)
+    {
+        $kelurahanData = [
+            "010" => [
+                "001" => "Dompak",
+                "002" => "Tanjungpinang Timur",
+                "003" => "Tanjung Ayun Sakti",
+                "004" => "Sei Jang",
+                "005" => "Tanjung Unggat"
+            ],
+            "020" => [
+                "001" => "Batu Sembilan",
+                "002" => "Melayu Kota Piring",
+                "003" => "Air Raja",
+                "004" => "Pinang Kencana",
+                "005" => "Kampung Bulang"
+            ],
+            "030" => [
+                "001" => "Tanjungpinang Kota",
+                "002" => "Penyengat",
+                "003" => "Kampung Bugis",
+                "004" => "Senggarang"
+            ],
+            "040" => [
+                "001" => "Tanjungpinang Barat",
+                "002" => "Kemboja",
+                "003" => "Kampung Baru",
+                "004" => "Bukit Cermin"
+            ]
+        ];
+
+        return $kelurahanData[$kecamatanCode][$kelurahanCode] ?? 'Unknown';
+    }
+    /**
+     * Show the form for creating a new resource (MITRA).
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function createMitra()
+    {
+        return view('mitra');
+    }
+
+    /**
+     * Store a newly created resource in storage (MITRA VERSION - FIELD OPSIONAL).
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function storeMitra(Request $request)
+    {
+        // Log semua data yang masuk untuk debugging
+        Log::info('Data yang masuk ke store mitra:', $request->all());
+
+        try {
+            $validated = $request->validate([
+                // Required fields - HANYA YANG WAJIB UNTUK MITRA
+                'kode_kecamatan' => 'required|in:010,020,030,040',
+                'kode_kelurahan' => 'required|string|max:3',
+                'alamat' => 'required|string|max:500',
+                'latitude' => 'required|numeric|between:-90,90', // Latitude wajib
+                'longitude' => 'required|numeric|between:-180,180', // Longitude wajib
+                'nama_kedai' => 'required|string|max:255',
+                'sumber' => 'required|string|in:mandiri,mitra', // Sumber wajib
+
+                // FIELD YANG DIBUAT OPSIONAL UNTUK MITRA
+                'nama_pemilik' => 'nullable|string|max:255',
+                'jenis_kelamin' => 'nullable|in:L,P',
+                'handphone' => 'nullable|string|min:10|max:20',
+                'omzet' => 'nullable|string',
+                'jumlah_pekerja' => 'nullable|integer|min:0',
+                'stan_sewa' => 'nullable|integer|min:0',
+                'tren_pekerja' => 'nullable|string|in:naik,turun,tetap',
+
+                // Still optional fields (sama seperti form mandiri)
+                'rw' => 'nullable|string|max:3',
+                'rt' => 'nullable|string|max:3',
+                'catatan' => 'nullable|string|max:1000',
+            ], [
+                // Required fields validation messages
+                'kode_kecamatan.required' => 'Kecamatan wajib dipilih',
+                'kode_kecamatan.in' => 'Kecamatan tidak valid',
+                'kode_kelurahan.required' => 'Kelurahan wajib dipilih',
+                'alamat.required' => 'Alamat kedai wajib diisi',
+                'latitude.required' => 'Lokasi GPS wajib dikonfirmasi',
+                'latitude.numeric' => 'Latitude harus berupa angka',
+                'latitude.between' => 'Latitude tidak valid',
+                'longitude.required' => 'Lokasi GPS wajib dikonfirmasi',
+                'longitude.numeric' => 'Longitude harus berupa angka',
+                'longitude.between' => 'Longitude tidak valid',
+                'nama_kedai.required' => 'Nama kedai wajib diisi',
+                'sumber.required' => 'Sumber data wajib diisi',
+                'sumber.in' => 'Sumber data tidak valid',
+
+                // Optional fields validation messages (jika diisi harus valid)
+                'nama_pemilik.max' => 'Nama pemilik maksimal 255 karakter',
+                'jenis_kelamin.in' => 'Jenis kelamin tidak valid',
+                'handphone.min' => 'Nomor handphone minimal 10 digit',
+                'handphone.max' => 'Nomor handphone maksimal 20 digit',
+                'jumlah_pekerja.integer' => 'Jumlah pekerja harus berupa angka',
+                'jumlah_pekerja.min' => 'Jumlah pekerja tidak boleh kurang dari 0',
+                'stan_sewa.integer' => 'Jumlah stan sewa harus berupa angka',
+                'stan_sewa.min' => 'Jumlah stan sewa tidak boleh kurang dari 0',
+                'tren_pekerja.in' => 'Tren pekerja tidak valid',
+            ]);
+
+            Log::info('Data setelah validasi mitra:', $validated);
+
+            DB::beginTransaction();
+
+            // Process omzet - handle null values untuk mitra
+            $omzetValue = 0; // Default untuk mitra jika kosong
+            if (!empty($validated['omzet'])) {
+                $omzetValue = str_replace(['Rp', '.', ' '], '', $validated['omzet']);
+                $omzetValue = (int) $omzetValue;
+            }
+
+            Log::info('Omzet setelah diproses mitra:', ['original' => $validated['omzet'] ?? 'null', 'processed' => $omzetValue]);
+
+            // Prepare data for saving
+            $data = $validated;
+            $data['omzet'] = $omzetValue;
+            $data['kode_kota'] = '2172'; // Default for Tanjungpinang
+
+            // Handle RT/RW - set default value jika kosong
+            if (empty($data['rt']) || $data['rt'] === '') {
+                $data['rt'] = '000'; // Default value
+            }
+            if (empty($data['rw']) || $data['rw'] === '') {
+                $data['rw'] = '000'; // Default value
+            }
+
+            // Handle optional fields untuk mitra - set NULL jika kosong
+            $optionalFields = ['nama_pemilik', 'jenis_kelamin', 'handphone', 'jumlah_pekerja', 'stan_sewa', 'tren_pekerja', 'catatan'];
+            foreach ($optionalFields as $field) {
+                if (empty($data[$field]) || $data[$field] === '') {
+                    $data[$field] = null;
+                }
+            }
+
+            // Special handling untuk jumlah_pekerja - jika kosong set 0
+            if (is_null($data['jumlah_pekerja'])) {
+                $data['jumlah_pekerja'] = 0;
+            }
+
+            // Special handling untuk stan_sewa - jika kosong set 0
+            if (is_null($data['stan_sewa'])) {
+                $data['stan_sewa'] = 0;
+            }
+
+            Log::info('Data yang akan disimpan mitra:', $data);
+
+            // Create the record
+            $kedaiKopi = KedaiKopi::create($data);
+
+            Log::info('Data berhasil disimpan mitra:', ['id' => $kedaiKopi->id]);
+
+            DB::commit();
+
+            return redirect()->route('mitra')->with('success', [
+                'message' => 'Data kedai kopi berhasil disimpan melalui form mitra!',
+                'data' => [
+                    'nama_kedai' => $kedaiKopi->nama_kedai,
+                    'nama_pemilik' => $kedaiKopi->nama_pemilik ?? 'Tidak diisi',
+                    'created_at' => Carbon::now('Asia/Jakarta'),
+                ]
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error mitra:', ['errors' => $e->errors()]);
+            throw $e; // Re-throw validation exception untuk ditangani Laravel
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error saat menyimpan data kedai kopi mitra:', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Terjadi kesalahan saat menyimpan data: ' . $e->getMessage());
+        }
+    }
+    /**
+     * Display peta sebaran kedai kopi (authenticated).
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function peta()
+    {
+        // Get basic statistics
+        $stats = $this->getStatistics();
+        $totalKedai = $stats['total_kedai'];
+        $kedaiWithLocation = $stats['kedai_with_location'];
+        $kedaiByKecamatan = $stats['kedai_by_kecamatan'];
+
+        $kecamatanNames = [
+            '010' => 'Bukit Bestari',
+            '020' => 'Tanjungpinang Timur',
+            '030' => 'Tanjungpinang Kota',
+            '040' => 'Tanjungpinang Barat',
+        ];
+        // Get all kedai data - biarkan yang implement menentukan field apa saja yang diperlukan
+        $kedaiData = KedaiKopi::all();
+
+        return view('peta', compact(
+            'totalKedai',
+            'kedaiWithLocation',
+            'kedaiByKecamatan',
+            'kedaiData',
+            'kecamatanNames'
+        ));
     }
 }

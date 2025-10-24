@@ -1,8 +1,4 @@
 <x-app-layout>
-    {{-- <x-slot name="header">
-        Dashboard
-    </x-slot> --}}
-
     <div class="relative z-10 py-12">
         <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
             <!-- Welcome Card -->
@@ -44,6 +40,11 @@
                 $avgOmzet = $stats['avg_omzet'];
                 $kedaiWithLocation = $stats['kedai_with_location'];
                 $kedaiByKecamatan = $stats['kedai_by_kecamatan'];
+
+                // Stats berdasarkan sumber
+                $kedaiMandiri = $stats['kedai_mandiri'] ?? 0;
+                $kedaiMitra = $stats['kedai_mitra'] ?? 0;
+
                 $kecamatanNames = [
                     '010' => 'Bukit Bestari',
                     '020' => 'Tanjungpinang Timur',
@@ -59,6 +60,7 @@
                 $kecamatan = request('kecamatan', '');
                 $kelurahan = request('kelurahan', '');
                 $lokasi = request('lokasi', '');
+                $sumber = request('sumber', '');
                 $sortBy = request('sort', 'created_at');
                 $sortDir = request('direction', 'desc');
                 $currentPage = request('page', 1);
@@ -92,6 +94,11 @@
                     }
                 }
 
+                // Filter by sumber
+                if ($sumber) {
+                    $query->where('sumber', $sumber);
+                }
+
                 // Apply sorting ke semua data
                 $validSorts = ['nama_kedai', 'nama_pemilik', 'omzet', 'jumlah_pekerja', 'stan_sewa', 'created_at'];
                 if (in_array($sortBy, $validSorts)) {
@@ -109,6 +116,17 @@
                 // Calculate pagination info
                 $totalPages = ceil($totalFiltered / $perPage);
                 $hasPages = $totalPages > 1;
+
+                // Stats yang lebih relevan
+                $kedaiWithOmzetData = App\Models\KedaiKopi::whereNotNull('omzet')->where('omzet', '>', 0)->count();
+                $kedaiWithPekerjaData = App\Models\KedaiKopi::whereNotNull('jumlah_pekerja')
+                    ->where('jumlah_pekerja', '>', 0)
+                    ->count();
+
+                // Data berdasarkan tren pekerja
+                $trenNaik = App\Models\KedaiKopi::where('tren_pekerja', 'naik')->count();
+                $trenTurun = App\Models\KedaiKopi::where('tren_pekerja', 'turun')->count();
+                $trenTetap = App\Models\KedaiKopi::where('tren_pekerja', 'tetap')->count();
             @endphp
 
             <!-- Stats Cards -->
@@ -130,6 +148,7 @@
                             <div class="ml-4">
                                 <dt class="text-sm font-medium text-medium-brown">Total Kedai Kopi</dt>
                                 <dd class="text-2xl font-bold text-dark-brown">{{ number_format($totalKedai) }}</dd>
+                                <dd class="text-xs text-medium-brown">Terdaftar di sistem</dd>
                             </div>
                         </div>
                     </div>
@@ -155,6 +174,8 @@
                                 <dt class="text-sm font-medium text-medium-brown">Data Berlokasi</dt>
                                 <dd class="text-2xl font-bold text-dark-brown">{{ number_format($kedaiWithLocation) }}
                                 </dd>
+                                <dd class="text-xs text-medium-brown">{{ number_format($progressVerifikasi, 1) }}% dari
+                                    total</dd>
                             </div>
                         </div>
                     </div>
@@ -166,7 +187,7 @@
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
                                 <div class="flex items-center justify-center w-12 h-12 rounded-lg bg-cream-yellow/20">
-                                    <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor"
+                                    <svg class="w-6 h-6 text-light-brown" fill="none" stroke="currentColor"
                                         viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
@@ -177,6 +198,7 @@
                             <div class="ml-4">
                                 <dt class="text-sm font-medium text-medium-brown">Total Pekerja</dt>
                                 <dd class="text-2xl font-bold text-dark-brown">{{ number_format($totalPekerja) }}</dd>
+                                <dd class="text-xs text-medium-brown">{{ $kedaiWithPekerjaData }} kedai melaporkan</dd>
                             </div>
                         </div>
                     </div>
@@ -199,8 +221,136 @@
                             <div class="ml-4">
                                 <dt class="text-sm font-medium text-medium-brown">Rata-rata Omzet</dt>
                                 <dd class="text-lg font-bold text-dark-brown">
-                                    {{ $avgOmzet > 0 ? 'Rp ' . number_format($avgOmzet, 0, ',', '.') : 'Rp 0' }}</dd>
+                                    @if ($avgOmzet && $avgOmzet > 0)
+                                        Rp {{ number_format($avgOmzet / 1000000, 1) }}M
+                                    @else
+                                        <span class="text-sm text-gray-500">Belum ada data</span>
+                                    @endif
+                                </dd>
+                                <dd class="text-xs text-medium-brown">{{ $kedaiWithOmzetData }} kedai melaporkan</dd>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distribusi Sumber Data dan Tren Pekerja -->
+            <div class="grid grid-cols-1 gap-8 mb-8 lg:grid-cols-2">
+                <!-- Sumber Input Data -->
+                <div
+                    class="overflow-hidden border shadow-lg bg-white/90 backdrop-blur-sm rounded-xl border-primary-orange/20">
+                    <div class="p-6">
+                        <h3 class="flex items-center mb-4 text-lg font-semibold font-poppins text-dark-brown">
+                            <svg class="w-5 h-5 mr-2 text-primary-orange" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4">
+                                </path>
+                            </svg>
+                            Sumber Input Data
+                        </h3>
+
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <!-- Input Mandiri -->
+                            <div
+                                class="p-4 text-center border rounded-lg bg-gradient-to-br from-primary-orange/5 to-primary-orange/10 border-primary-orange/20">
+                                <div class="mb-1 text-2xl font-bold text-primary-orange">{{ $kedaiMandiri }}</div>
+                                <div class="mb-2 text-sm font-medium text-dark-brown">Input Mandiri</div>
+                                <div class="w-full h-2 rounded-full bg-primary-orange/10">
+                                    <div class="h-2 transition-all duration-300 rounded-full bg-primary-orange"
+                                        style="width: {{ $totalKedai > 0 ? ($kedaiMandiri / $totalKedai) * 100 : 0 }}%">
+                                    </div>
+                                </div>
+                                <div class="mt-1 text-xs font-medium text-primary-orange">
+                                    {{ $totalKedai > 0 ? number_format(($kedaiMandiri / $totalKedai) * 100, 1) : 0 }}%
+                                </div>
+                            </div>
+
+                            <!-- Input Mitra -->
+                            <div
+                                class="p-4 text-center border rounded-lg bg-gradient-to-br from-medium-brown/5 to-medium-brown/10 border-medium-brown/20">
+                                <div class="mb-1 text-2xl font-bold text-medium-brown">{{ $kedaiMitra }}</div>
+                                <div class="mb-2 text-sm font-medium text-dark-brown">Input Mitra</div>
+                                <div class="w-full h-2 rounded-full bg-medium-brown/10">
+                                    <div class="h-2 transition-all duration-300 rounded-full bg-medium-brown"
+                                        style="width: {{ $totalKedai > 0 ? ($kedaiMitra / $totalKedai) * 100 : 0 }}%">
+                                    </div>
+                                </div>
+                                <div class="mt-1 text-xs font-medium text-medium-brown">
+                                    {{ $totalKedai > 0 ? number_format(($kedaiMitra / $totalKedai) * 100, 1) : 0 }}%
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 text-xs text-medium-brown/80">
+                            <strong>Input Mandiri:</strong> Data diisi langsung oleh pemilik kedai kopi<br>
+                            <strong>Input Mitra:</strong> Data diinput oleh mitra/enumerator BPS
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tren Jumlah Pekerja vs 2024 -->
+                <div
+                    class="overflow-hidden border shadow-lg bg-white/90 backdrop-blur-sm rounded-xl border-primary-orange/20">
+                    <div class="p-6">
+                        <h3 class="flex items-center mb-4 text-lg font-semibold font-poppins text-dark-brown">
+                            <svg class="w-5 h-5 mr-2 text-primary-orange" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                            </svg>
+                            Tren Jumlah Pekerja vs 2024
+                        </h3>
+
+                        <div class="grid grid-cols-3 gap-3">
+                            <!-- Naik -->
+                            <div
+                                class="p-3 text-center border rounded-lg bg-gradient-to-br from-bright-orange/10 to-bright-orange/5 border-bright-orange/20">
+                                <div class="mb-1 text-xl font-bold text-bright-orange">{{ $trenNaik }}</div>
+                                <div class="mb-1 text-xs font-medium text-dark-brown">Naik</div>
+                                <div class="w-full h-1.5 rounded-full bg-bright-orange/10">
+                                    <div class="h-1.5 transition-all duration-300 rounded-full bg-bright-orange"
+                                        style="width: {{ $totalKedai > 0 ? ($trenNaik / $totalKedai) * 100 : 0 }}%">
+                                    </div>
+                                </div>
+                                <div class="mt-1 text-xs text-bright-orange">
+                                    {{ $totalKedai > 0 ? number_format(($trenNaik / $totalKedai) * 100, 1) : 0 }}%
+                                </div>
+                            </div>
+
+                            <!-- Tetap -->
+                            <div
+                                class="p-3 text-center border rounded-lg bg-gradient-to-br from-cream-yellow/20 to-cream-yellow/10 border-cream-yellow/30">
+                                <div class="mb-1 text-xl font-bold text-light-brown">{{ $trenTetap }}</div>
+                                <div class="mb-1 text-xs font-medium text-dark-brown">Tetap</div>
+                                <div class="w-full h-1.5 rounded-full bg-light-brown/10">
+                                    <div class="h-1.5 transition-all duration-300 rounded-full bg-light-brown"
+                                        style="width: {{ $totalKedai > 0 ? ($trenTetap / $totalKedai) * 100 : 0 }}%">
+                                    </div>
+                                </div>
+                                <div class="mt-1 text-xs text-light-brown">
+                                    {{ $totalKedai > 0 ? number_format(($trenTetap / $totalKedai) * 100, 1) : 0 }}%
+                                </div>
+                            </div>
+
+                            <!-- Turun -->
+                            <div
+                                class="p-3 text-center border rounded-lg bg-gradient-to-br from-dark-brown/10 to-dark-brown/5 border-dark-brown/20">
+                                <div class="mb-1 text-xl font-bold text-dark-brown">{{ $trenTurun }}</div>
+                                <div class="mb-1 text-xs font-medium text-dark-brown">Turun</div>
+                                <div class="w-full h-1.5 rounded-full bg-dark-brown/10">
+                                    <div class="h-1.5 transition-all duration-300 rounded-full bg-dark-brown"
+                                        style="width: {{ $totalKedai > 0 ? ($trenTurun / $totalKedai) * 100 : 0 }}%">
+                                    </div>
+                                </div>
+                                <div class="mt-1 text-xs text-dark-brown">
+                                    {{ $totalKedai > 0 ? number_format(($trenTurun / $totalKedai) * 100, 1) : 0 }}%
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 text-xs text-medium-brown/80">
+                            Perbandingan jumlah pekerja saat ini dengan akhir tahun 2024
                         </div>
                     </div>
                 </div>
@@ -245,8 +395,6 @@
                 </div>
             </div>
 
-            <!-- Status Verifikasi Lokasi -->
-
             <!-- Tabel Data Kedai Kopi -->
             <div
                 class="overflow-hidden border shadow-lg bg-white/90 backdrop-blur-sm rounded-xl border-primary-orange/20">
@@ -270,7 +418,7 @@
 
                     <!-- Filter dan Search -->
                     <form method="GET" action="{{ route('dashboard') }}" class="mb-6">
-                        <div class="grid grid-cols-1 gap-4 p-4 rounded-lg md:grid-cols-4 bg-cream-yellow/10">
+                        <div class="grid grid-cols-1 gap-4 p-4 rounded-lg md:grid-cols-5 bg-cream-yellow/10">
                             <div>
                                 <label class="block mb-1 text-xs font-medium text-dark-brown">Search</label>
                                 <input type="text" name="search" value="{{ $search }}"
@@ -306,6 +454,18 @@
                                     <option value="">Semua Status</option>
                                     <option value="1" {{ $lokasi == '1' ? 'selected' : '' }}>Ada Lokasi</option>
                                     <option value="0" {{ $lokasi == '0' ? 'selected' : '' }}>Tanpa Lokasi
+                                    </option>
+                                </select>
+                            </div>
+                            <!-- Filter Sumber -->
+                            <div>
+                                <label class="block mb-1 text-xs font-medium text-dark-brown">Sumber Input</label>
+                                <select name="sumber"
+                                    class="w-full px-3 py-2 text-sm border rounded-lg border-light-brown/30 focus:ring-2 focus:ring-primary-orange focus:border-transparent">
+                                    <option value="">Semua Sumber</option>
+                                    <option value="mandiri" {{ $sumber == 'mandiri' ? 'selected' : '' }}>Input Mandiri
+                                    </option>
+                                    <option value="mitra" {{ $sumber == 'mitra' ? 'selected' : '' }}>Input Mitra
                                     </option>
                                 </select>
                             </div>
@@ -387,7 +547,10 @@
                                         </th>
                                         <th
                                             class="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-dark-brown">
-                                            RT/RW & Alamat</th>
+                                            RT/RW</th>
+                                        <th
+                                            class="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-dark-brown">
+                                            Alamat</th>
                                         <th
                                             class="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-dark-brown">
                                             Kecamatan</th>
@@ -480,7 +643,21 @@
                                             Lokasi GPS</th>
                                         <th
                                             class="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-dark-brown">
-                                            Catatan</th>
+                                            Sumber Input</th>
+                                        <!-- HEADER KOLOM CATATAN - UPDATE WIDTH -->
+                                        <th
+                                            class="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-dark-brown w-80">
+                                            <div class="flex items-center">
+                                                <svg class="w-4 h-4 mr-2 text-primary-orange" fill="none"
+                                                    stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z">
+                                                    </path>
+                                                </svg>
+                                                Catatan
+                                            </div>
+                                        </th>
                                         <th
                                             class="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-dark-brown">
                                             <a href="{{ request()->fullUrlWithQuery(['sort' => 'created_at', 'direction' => $sortBy == 'created_at' && $sortDir == 'asc' ? 'desc' : 'asc', 'page' => 1]) }}"
@@ -518,27 +695,31 @@
                                                 <div class="text-xs text-medium-brown">{{ $kedai->gender_text }}</div>
                                             </td>
                                             <td class="px-4 py-3 whitespace-nowrap">
-                                                <div class="text-sm text-dark-brown">{{ $kedai->nama_pemilik }}</div>
-                                                <div class="text-xs text-medium-brown">Pemilik</div>
+                                                <div class="text-sm text-dark-brown">
+                                                    {{ $kedai->formatted_nama_pemilik }}</div>
+                                                @if ($kedai->nama_pemilik)
+                                                    <div class="text-xs text-medium-brown">Pemilik</div>
+                                                @else
+                                                    <div class="text-xs text-gray-400">Data tidak diisi</div>
+                                                @endif
                                             </td>
-                                            <td class="px-4 py-3">
-                                                <div class="text-sm font-medium text-dark-brown">
-                                                    RT {{ $kedai->rt }} / RW {{ $kedai->rw }}</div>
-                                                <div class="text-xs text-medium-brown">{{ $kedai->alamat }}</div>
-                                            </td>
+                                            <td class="px-4 py-3 text-sm whitespace-nowrap text-dark-brown">
+                                                {{ $kedai->formatted_rt_rw }}</td>
+                                            <td class="px-4 py-3 text-sm text-dark-brown">{{ $kedai->alamat }}</td>
                                             <td class="px-4 py-3 text-sm whitespace-nowrap text-dark-brown">
                                                 {{ $kedai->kecamatan_name }}</td>
                                             <td class="px-4 py-3 text-sm whitespace-nowrap text-dark-brown">
                                                 {{ $kedai->kelurahan_name }}</td>
                                             <td class="px-4 py-3 whitespace-nowrap">
-                                                <div class="text-sm text-dark-brown">{{ $kedai->handphone }}</div>
+                                                <div class="text-sm text-dark-brown">{{ $kedai->formatted_handphone }}
+                                                </div>
                                             </td>
                                             <td class="px-4 py-3 text-sm whitespace-nowrap text-dark-brown">
                                                 {{ $kedai->formatted_omzet }}</td>
                                             <td class="px-4 py-3 text-sm whitespace-nowrap text-dark-brown">
-                                                {{ $kedai->jumlah_pekerja }} orang</td>
+                                                {{ $kedai->formatted_jumlah_pekerja }}</td>
                                             <td class="px-4 py-3 text-sm whitespace-nowrap text-dark-brown">
-                                                {{ $kedai->stan_sewa }} stan</td>
+                                                {{ $kedai->formatted_stan_sewa }}</td>
                                             <td class="px-4 py-3 text-center whitespace-nowrap">
                                                 @if ($kedai->latitude && $kedai->longitude)
                                                     <a href="https://www.google.com/maps?q={{ $kedai->latitude }},{{ $kedai->longitude }}"
@@ -569,11 +750,41 @@
                                                     </span>
                                                 @endif
                                             </td>
-                                            <td class="max-w-xs px-4 py-3">
-                                                @if ($kedai->catatan)
-                                                    <div class="text-sm text-dark-brown"
-                                                        title="{{ $kedai->catatan }}">
-                                                        {{ Str::limit($kedai->catatan, 50) }}
+                                            <!-- Kolom Sumber Input -->
+                                            <td class="px-4 py-3 text-sm whitespace-nowrap text-dark-brown">
+                                                @if ($kedai->sumber == 'mandiri')
+                                                    <span
+                                                        class="inline-flex items-center px-2 py-1 text-xs font-medium text-white rounded-full bg-primary-orange">
+                                                        <svg class="w-3 h-3 mr-1" fill="none"
+                                                            stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
+                                                            </path>
+                                                        </svg>
+                                                        Mandiri
+                                                    </span>
+                                                @elseif ($kedai->sumber == 'mitra')
+                                                    <span
+                                                        class="inline-flex items-center px-2 py-1 text-xs font-medium text-white rounded-full bg-medium-brown">
+                                                        <svg class="w-3 h-3 mr-1" fill="none"
+                                                            stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                                                            </path>
+                                                        </svg>
+                                                        Mitra
+                                                    </span>
+                                                @else
+                                                    <span class="text-xs text-gray-400">Tidak diset</span>
+                                                @endif
+                                            </td>
+                                            <!-- KOLOM CATATAN - TAMPILAN BIASA -->
+                                            <td class="max-w-sm px-4 py-3 text-sm text-dark-brown">
+                                                @if ($kedai->catatan && $kedai->catatan !== '')
+                                                    <div class="text-sm leading-relaxed text-dark-brown">
+                                                        {{ $kedai->catatan }}
                                                     </div>
                                                 @else
                                                     <span class="text-xs text-gray-400">-</span>
@@ -639,6 +850,7 @@
                         <div
                             class="flex items-center justify-between px-4 py-2 mt-4 text-sm rounded-lg text-medium-brown bg-cream-yellow/10">
                             <span>Total: {{ $totalFiltered }} kedai kopi ditampilkan</span>
+                            <span>Mandiri: {{ $kedaiMandiri }} | Mitra: {{ $kedaiMitra }}</span>
                             <span>Terakhir diperbarui: {{ now()->format('d M Y, H:i') }}</span>
                         </div>
                     @else
@@ -654,13 +866,13 @@
                             </div>
                             <h4 class="mb-2 text-lg font-medium text-dark-brown">Tidak Ada Data</h4>
                             <p class="mb-6 text-sm text-medium-brown">
-                                @if ($search || $kecamatan || $kelurahan || $lokasi !== '')
+                                @if ($search || $kecamatan || $kelurahan || $lokasi !== '' || $sumber)
                                     Tidak ada data yang sesuai dengan filter yang dipilih
                                 @else
                                     Belum ada data kedai kopi di sistem
                                 @endif
                             </p>
-                            @if ($search || $kecamatan || $kelurahan || $lokasi !== '')
+                            @if ($search || $kecamatan || $kelurahan || $lokasi !== '' || $sumber)
                                 <a href="{{ route('dashboard') }}"
                                     class="font-medium text-primary-orange hover:text-bright-orange">
                                     Reset Filter

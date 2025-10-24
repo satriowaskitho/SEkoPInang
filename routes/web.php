@@ -14,10 +14,17 @@ use App\Http\Controllers\KedaiKopiController;
 |
 */
 
-// Route untuk form kedai kopi (public access)
+// Route untuk form kedai kopi MANDIRI (public access)
 Route::get('/', [KedaiKopiController::class, 'create'])->name('form');
 Route::get('/form', [KedaiKopiController::class, 'create'])->name('form');
 Route::post('/kedai-kopi', [KedaiKopiController::class, 'store'])->name('kedai-kopi.store');
+
+// Route untuk form kedai kopi MITRA (public access) - TAMBAHAN BARU
+Route::get('/mitra', [KedaiKopiController::class, 'createMitra'])->name('mitra');
+Route::post('/kedai-kopi/mitra', [KedaiKopiController::class, 'storeMitra'])->name('kedai-kopi.store-mitra');
+
+// Route untuk monitor public (tanpa authentication)
+Route::get('/monitor', [KedaiKopiController::class, 'monitor'])->name('monitor');
 
 // Route untuk dashboard (dengan authentication)
 Route::middleware([
@@ -28,6 +35,9 @@ Route::middleware([
     Route::get('/dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
+
+    // TAMBAHAN BARU - Route untuk halaman peta (authenticated)
+    Route::get('/peta', [KedaiKopiController::class, 'peta'])->name('peta');
 
     // Resource routes untuk CRUD kedai kopi (authenticated)
     Route::resource('kedai-kopi', KedaiKopiController::class)->except(['create', 'store']);

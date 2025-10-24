@@ -20,9 +20,9 @@
                 <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
                     <x-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')"
                         class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out focus:outline-none
-                        {{ request()->routeIs('dashboard')
-                            ? 'border-primary-orange text-dark-brown'
-                            : 'border-transparent text-medium-brown hover:text-dark-brown hover:border-bright-orange' }}">
+        {{ request()->routeIs('dashboard')
+            ? 'border-primary-orange text-dark-brown'
+            : 'border-transparent text-medium-brown hover:text-dark-brown hover:border-bright-orange' }}">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
@@ -30,6 +30,21 @@
                                 d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z"></path>
                         </svg>
                         {{ __('Dashboard') }}
+                    </x-nav-link>
+
+                    <!-- TAMBAHAN BARU - Link Peta -->
+                    <x-nav-link href="{{ route('peta') }}" :active="request()->routeIs('peta')"
+                        class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium leading-5 transition duration-150 ease-in-out focus:outline-none
+        {{ request()->routeIs('peta')
+            ? '!border-[#e44012] text-dark-brown'
+            : 'border-transparent text-medium-brown hover:text-dark-brown hover:border-bright-orange' }}"
+                        style="{{ request()->routeIs('peta') ? 'border-bottom-color: #e44012 !important;' : '' }}">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7">
+                            </path>
+                        </svg>
+                        {{ __('Peta Kedai') }}
                     </x-nav-link>
                 </div>
             </div>
@@ -143,7 +158,7 @@
                                         <svg class="inline w-4 h-4 mr-2" fill="none" stroke="currentColor"
                                             viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z">
+                                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z">
                                             </path>
                                         </svg>
                                         {{ __('API Tokens') }}
@@ -191,7 +206,7 @@
 
     <!-- Responsive Navigation Menu -->
     <div :class="{ 'block': open, 'hidden': !open }" class="hidden sm:hidden">
-        {{-- <div class="pt-2 pb-3 space-y-1 border-t bg-white/90 backdrop-blur-sm border-primary-orange/20">
+        <div class="pt-2 pb-3 space-y-1 border-t bg-white/90 backdrop-blur-sm border-primary-orange/20">
             <x-responsive-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')"
                 class="flex items-center {{ request()->routeIs('dashboard')
                     ? 'bg-primary-orange/10 border-r-4 border-primary-orange text-dark-brown'
@@ -204,7 +219,20 @@
                 </svg>
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
-        </div> --}}
+
+            <!-- TAMBAHAN BARU - Responsive Link Peta -->
+            <x-responsive-nav-link href="{{ route('peta') }}" :active="request()->routeIs('peta')"
+                class="flex items-center {{ request()->routeIs('peta')
+                    ? 'bg-primary-orange/10 border-r-4 border-primary-orange text-dark-brown'
+                    : 'text-medium-brown hover:text-dark-brown hover:bg-cream-yellow/20' }}">
+                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7">
+                    </path>
+                </svg>
+                {{ __('Peta Kedai') }}
+            </x-responsive-nav-link>
+        </div>
 
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-primary-orange/20 bg-cream-yellow/20">
@@ -238,7 +266,7 @@
                         class="flex items-center text-medium-brown hover:text-dark-brown hover:bg-white/50">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z">
+                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z">
                             </path>
                         </svg>
                         {{ __('API Tokens') }}

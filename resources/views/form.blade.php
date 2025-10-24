@@ -176,10 +176,20 @@
     <div class="container max-w-4xl p-5 mx-auto">
         <!-- Header -->
         <div class="relative mb-12 text-center">
-            <div class="mb-6">
-                <img src="{{ asset('images/logo.png') }}" alt="SEkoPInang Logo"
-                    class="object-contain w-24 h-24 mx-auto transition-transform duration-300 filter drop-shadow-lg hover:scale-105"
-                    onerror="this.style.display='none'">
+            <div class="flex items-center justify-center gap-6 mb-6">
+                <!-- Logo Container dengan backdrop -->
+                <div
+                    class="flex items-center gap-6 px-8 py-6 overflow-hidden border rounded-full shadow-lg bg-white/95 backdrop-blur-sm border-primary-orange/20">
+                    <!-- Logo BPS -->
+                    <img src="{{ asset('images/logo-bps.png') }}" alt="BPS Logo"
+                        class="object-contain w-20 h-20 transition-transform duration-300 filter drop-shadow-lg hover:scale-105 md:w-24 md:h-24"
+                        onerror="this.style.display='none'">
+
+                    <!-- Logo SEkoPInang -->
+                    <img src="{{ asset('images/logo.png') }}" alt="SEkoPInang Logo"
+                        class="object-contain w-20 h-20 transition-transform duration-300 filter drop-shadow-lg hover:scale-105 md:w-24 md:h-24"
+                        onerror="this.style.display='none'">
+                </div>
             </div>
             <h1 class="mb-4 text-dark-brown text-shadow-sm">
                 <span
@@ -187,7 +197,7 @@
                     SEkoPInang
                 </span>
                 <span class="block text-lg font-medium leading-tight tracking-wide text-light-brown md:text-xl">
-                    Harmonisasi Jelang SE: Data Kedai Kopi di Tanjungpinang
+                    Harmonisasi Jelang Sensus Ekonomi: Data Kedai Kopi di Tanjungpinang
                 </span>
             </h1>
         </div>
@@ -201,7 +211,11 @@
                     <div>
                         <strong>{{ session('success.message') }}</strong><br>
                         <small class="text-green-600">
-                            {{ session('success.data.nama_kedai') }} - {{ session('success.data.nama_pemilik') }}<br>
+                            {{ session('success.data.nama_kedai') }}
+                            @if (session('success.data.nama_pemilik'))
+                                - {{ session('success.data.nama_pemilik') }}
+                            @endif
+                            <br>
                             Disimpan pada: {{ session('success.data.created_at') }}
                         </small>
                     </div>
@@ -240,8 +254,46 @@
             </div>
         @endif
 
+        <!-- Informasi Survei -->
+        <div
+            class="mb-8 overflow-hidden border shadow-lg bg-white/95 backdrop-blur-sm rounded-xl border-primary-orange/20">
+            <div class="p-6">
+                <h3 class="flex items-center mb-4 text-lg font-semibold font-poppins text-dark-brown">
+                    <svg class="w-5 h-5 mr-2 text-primary-orange" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Informasi Survei
+                </h3>
+
+                <div class="space-y-4 text-sm text-medium-brown">
+                    <p class="leading-relaxed">
+                        Hai, yuk ikut berpartisipasi dalam Pendataan Kedai Kopi yang diselenggarakan oleh Badan Pusat
+                        Statistik (BPS) Kota Tanjungpinang. Anda hanya perlu meluangkan waktu <strong
+                            class="text-dark-brown">maksimal</strong> 5 (lima) menit untuk mengisi survei ini.
+                    </p>
+
+                    <p class="leading-relaxed">
+                        Pendataan ini dilakukan sebagai pemetaan awal terhadap kegiatan ekonomi berbasis UMKM, khususnya
+                        sektor usaha kedai kopi yang saat ini berkembang cukup pesat dan menjadi bagian dari dinamika
+                        ekonomi perkotaan di Kota Tanjungpinang.
+                    </p>
+
+                    <p class="leading-relaxed">
+                        Kerahasiaan jawaban Anda dilindungi Undang-undang No.16 Tahun 1997 tentang Statistik.
+                        Partisipasi dan jawaban Anda sangat bermanfaat untuk menentukan arah kebijakan perekonomian
+                        khususnya di Kota Tanjungpinang.
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <form id="businessForm" method="POST" action="{{ route('kedai-kopi.store') }}" class="space-y-8">
             @csrf
+
+            <!-- Input Hidden untuk Sumber - TAMBAHAN BARU -->
+            <input type="hidden" name="sumber" value="mandiri">
 
             <!-- Blok 1: Keterangan Lokasi -->
             <div
@@ -267,18 +319,22 @@
                     </div>
                     <div>
                         <label for="kecamatan" class="block mb-2 text-sm font-medium text-dark-brown">
-                            Kecamatan <span class="text-red-500">*</span>
+                            Kecamatan <span class="font-bold text-red-500">*</span>
                         </label>
                         <select id="kecamatan" name="kode_kecamatan" required
                             class="bg-white-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-orange focus:border-primary-orange block w-full p-2.5 {{ $errors->has('kode_kecamatan') ? 'error-border' : '' }}">
                             <option value="">Pilih Kecamatan</option>
-                            <option value="010" {{ old('kode_kecamatan') == '010' ? 'selected' : '' }}>Bukit Bestari
+                            <option value="010" {{ old('kode_kecamatan') == '010' ? 'selected' : '' }}>Bukit
+                                Bestari
                             </option>
-                            <option value="020" {{ old('kode_kecamatan') == '020' ? 'selected' : '' }}>Tanjungpinang
+                            <option value="020" {{ old('kode_kecamatan') == '020' ? 'selected' : '' }}>
+                                Tanjungpinang
                                 Timur</option>
-                            <option value="030" {{ old('kode_kecamatan') == '030' ? 'selected' : '' }}>Tanjungpinang
+                            <option value="030" {{ old('kode_kecamatan') == '030' ? 'selected' : '' }}>
+                                Tanjungpinang
                                 Kota</option>
-                            <option value="040" {{ old('kode_kecamatan') == '040' ? 'selected' : '' }}>Tanjungpinang
+                            <option value="040" {{ old('kode_kecamatan') == '040' ? 'selected' : '' }}>
+                                Tanjungpinang
                                 Barat</option>
                         </select>
                         @if ($errors->has('kode_kecamatan'))
@@ -290,7 +346,7 @@
                 <div class="grid grid-cols-1 gap-6 mb-6 md:grid-cols-3">
                     <div>
                         <label for="kelurahan" class="block mb-2 text-sm font-medium text-dark-brown">
-                            Kelurahan <span class="text-red-500">*</span>
+                            Kelurahan <span class="font-bold text-red-500">*</span>
                         </label>
                         <select id="kelurahan" name="kode_kelurahan" required disabled
                             class="bg-white-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-orange focus:border-primary-orange block w-full p-2.5 disabled:cursor-not-allowed disabled:opacity-50 {{ $errors->has('kode_kelurahan') ? 'error-border' : '' }}">
@@ -302,11 +358,11 @@
                     </div>
                     <div>
                         <label for="rw" class="block mb-2 text-sm font-medium text-dark-brown">
-                            RW <span class="text-red-500">*</span>
+                            RW
                         </label>
                         <div class="relative">
-                            <input type="text" id="rw" name="rw" placeholder="001" maxlength="3"
-                                pattern="[0-9]{3}" required value="{{ old('rw') }}"
+                            <input type="text" id="rw" name="rw" placeholder="001 (opsional)"
+                                maxlength="3" pattern="[0-9]{3}" value="{{ old('rw') }}"
                                 class="bg-white-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-orange focus:border-primary-orange block w-full p-2.5 pr-10 {{ $errors->has('rw') ? 'error-border' : '' }}">
                             <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                 <i class="fas fa-hashtag text-light-brown"></i>
@@ -315,16 +371,16 @@
                         @if ($errors->has('rw'))
                             <p class="error-text">{{ $errors->first('rw') }}</p>
                         @else
-                            <p class="mt-1 text-xs text-light-brown/70">Format: 001, 012, 123</p>
+                            <p class="mt-1 text-xs text-light-brown/70">Format: 001, 012, 123 (opsional)</p>
                         @endif
                     </div>
                     <div>
                         <label for="rt" class="block mb-2 text-sm font-medium text-dark-brown">
-                            RT <span class="text-red-500">*</span>
+                            RT
                         </label>
                         <div class="relative">
-                            <input type="text" id="rt" name="rt" placeholder="001" maxlength="3"
-                                pattern="[0-9]{3}" required value="{{ old('rt') }}"
+                            <input type="text" id="rt" name="rt" placeholder="001 (opsional)"
+                                maxlength="3" pattern="[0-9]{3}" value="{{ old('rt') }}"
                                 class="bg-white-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-orange focus:border-primary-orange block w-full p-2.5 pr-10 {{ $errors->has('rt') ? 'error-border' : '' }}">
                             <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                 <i class="fas fa-hashtag text-light-brown"></i>
@@ -333,14 +389,14 @@
                         @if ($errors->has('rt'))
                             <p class="error-text">{{ $errors->first('rt') }}</p>
                         @else
-                            <p class="mt-1 text-xs text-light-brown/70">Format: 001, 012, 123</p>
+                            <p class="mt-1 text-xs text-light-brown/70">Format: 001, 012, 123 (opsional)</p>
                         @endif
                     </div>
                 </div>
 
                 <div class="mb-6">
                     <label for="alamat" class="block mb-2 text-sm font-medium text-dark-brown">
-                        Alamat Kedai <span class="text-red-500">*</span>
+                        Alamat Kedai <span class="font-bold text-red-500">*</span>
                     </label>
                     <div class="relative">
                         <input type="text" id="alamat" name="alamat"
@@ -358,8 +414,8 @@
                 <!-- Geo Tagging Section -->
                 <div>
                     <label class="block mb-2 text-sm font-medium text-dark-brown">
-                        <i class="fas fa-map-pin"></i> Lokasi (Koordinat GPS) -
-                        <span class="font-normal text-light-brown">Opsional</span>
+                        <i class="fas fa-map-pin"></i> Lokasi (Koordinat GPS) <span
+                            class="font-bold text-red-500">*</span>
                     </label>
                     <div
                         class="p-6 border-2 bg-gradient-to-br from-cream-yellow to-white/90 rounded-2xl border-primary-orange/10">
@@ -377,7 +433,7 @@
                         <div id="locationInfo"
                             class="flex items-center gap-3 p-4 mb-4 text-sm border text-dark-brown bg-primary-orange/10 rounded-xl border-primary-orange/20">
                             <i class="text-lg fas fa-info-circle"></i>
-                            <span>Tekan "Deteksi Lokasi Saya" untuk mencari koordinat otomatis</span>
+                            <span>Tekan "Deteksi Lokasi Saya" untuk mencari koordinat otomatis (wajib)</span>
                         </div>
 
                         <div id="mapContainer" class="hidden mb-4">
@@ -426,7 +482,7 @@
                 <div class="grid grid-cols-1 gap-6 mb-6 md:grid-cols-2">
                     <div>
                         <label for="namaUsaha" class="block mb-2 text-sm font-medium text-dark-brown">
-                            Nama Kedai Kopi <span class="text-red-500">*</span>
+                            Nama Kedai Kopi <span class="font-bold text-red-500">*</span>
                         </label>
                         <div class="relative">
                             <input type="text" id="namaUsaha" name="nama_kedai"
@@ -442,11 +498,11 @@
                     </div>
                     <div>
                         <label for="namaPemilik" class="block mb-2 text-sm font-medium text-dark-brown">
-                            Nama Pemilik Usaha <span class="text-red-500">*</span>
+                            Nama Pemilik Usaha <span class="font-bold text-red-500">*</span>
                         </label>
                         <div class="relative">
-                            <input type="text" id="namaPemilik" name="nama_pemilik"
-                                placeholder="Masukkan nama pemilik usaha" required value="{{ old('nama_pemilik') }}"
+                            <input type="text" id="namaPemilik" name="nama_pemilik" required
+                                placeholder="Masukkan nama pemilik usaha" value="{{ old('nama_pemilik') }}"
                                 class="bg-white-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-orange focus:border-primary-orange block w-full p-2.5 pr-10 {{ $errors->has('nama_pemilik') ? 'error-border' : '' }}">
                             <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                 <i class="fas fa-user text-light-brown"></i>
@@ -461,7 +517,7 @@
                 <div class="grid grid-cols-1 gap-6 mb-6 md:grid-cols-2">
                     <div>
                         <label for="jenisKelamin" class="block mb-2 text-sm font-medium text-dark-brown">
-                            Jenis Kelamin <span class="text-red-500">*</span>
+                            Jenis Kelamin <span class="font-bold text-red-500">*</span>
                         </label>
                         <select id="jenisKelamin" name="jenis_kelamin" required
                             class="bg-white-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-orange focus:border-primary-orange block w-full p-2.5 {{ $errors->has('jenis_kelamin') ? 'error-border' : '' }}">
@@ -477,11 +533,11 @@
                     </div>
                     <div>
                         <label for="handphone" class="block mb-2 text-sm font-medium text-dark-brown">
-                            Handphone (Nomor HP) <span class="text-red-500">*</span>
+                            Handphone (Nomor HP) <span class="font-bold text-red-500">*</span>
                         </label>
                         <div class="relative">
-                            <input type="tel" id="handphone" name="handphone" placeholder="08xxxxxxxxxx"
-                                required value="{{ old('handphone') }}"
+                            <input type="tel" id="handphone" name="handphone" required
+                                placeholder="08xxxxxxxxxx" value="{{ old('handphone') }}"
                                 class="bg-white-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-orange focus:border-primary-orange block w-full p-2.5 pr-10 {{ $errors->has('handphone') ? 'error-border' : '' }}">
                             <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                 <i class="fas fa-mobile-alt text-light-brown"></i>
@@ -501,7 +557,7 @@
                 <div class="grid grid-cols-1 gap-6 mb-6 md:grid-cols-2">
                     <div>
                         <label for="omzet" class="block mb-2 text-sm font-medium text-dark-brown">
-                            Rata-rata Omzet Sebulan selama 2025 <span class="text-red-500">*</span>
+                            Rata-rata Omzet Sebulan selama 2025 <span class="font-bold text-red-500">*</span>
                         </label>
                         <div class="relative">
                             <input type="text" id="omzet" name="omzet" placeholder="Rp 0" required
@@ -514,7 +570,11 @@
                         @if ($errors->has('omzet'))
                             <p class="error-text">{{ $errors->first('omzet') }}</p>
                         @else
-                            <p class="mt-1 text-xs text-light-brown/70">Termasuk pendapatan sewa (jika ada)</p>
+                            <div class="mt-1 space-y-1">
+                                <p class="text-xs text-light-brown/70">Omzet = Pendapatan kotor (seluruh pendapatan
+                                    yang diterima sebelum dikurangi biaya usaha)</p>
+                                <p class="text-xs text-light-brown/70">Termasuk pendapatan sewa (jika ada)</p>
+                            </div>
                         @endif
                         <div id="omzetWarning" class="hidden">
                             <p class="warning-text">⚠️ WARNING: Rata-rata omzet sebulan/Jumlah pekerja HARUS lebih
@@ -523,7 +583,7 @@
                     </div>
                     <div>
                         <label for="jumlahPekerja" class="block mb-2 text-sm font-medium text-dark-brown">
-                            Jumlah Pekerja Sebulan Terakhir <span class="text-red-500">*</span>
+                            Jumlah Pekerja Sebulan Terakhir <span class="font-bold text-red-500">*</span>
                         </label>
                         <div class="relative">
                             <input type="number" id="jumlahPekerja" name="jumlah_pekerja" placeholder="0"
@@ -549,7 +609,7 @@
                 <div class="grid grid-cols-1 gap-6 md:grid-cols-1">
                     <div>
                         <label for="trenPekerja" class="block mb-2 text-sm font-medium text-dark-brown">
-                            Jumlah Pekerja Dibanding Akhir Tahun 2024 <span class="text-red-500">*</span>
+                            Jumlah Pekerja Dibanding Akhir Tahun 2024 <span class="font-bold text-red-500">*</span>
                         </label>
                         <select id="trenPekerja" name="tren_pekerja" required
                             class="bg-white-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-orange focus:border-primary-orange block w-full p-2.5 {{ $errors->has('tren_pekerja') ? 'error-border' : '' }}">
@@ -586,7 +646,7 @@
                 <div class="grid grid-cols-1 gap-6 mb-6 md:grid-cols-1">
                     <div>
                         <label for="stanSewa" class="block mb-2 text-sm font-medium text-dark-brown">
-                            Jumlah Stan/Tenant yang Disewakan <span class="text-red-500">*</span>
+                            Jumlah Stan/Tenant yang Disewakan <span class="font-bold text-red-500">*</span>
                         </label>
                         <div class="relative">
                             <input type="number" id="stanSewa" name="stan_sewa" placeholder="0" min="0"
@@ -642,7 +702,8 @@
                     </span>
                 </button>
                 <p class="mt-2 text-sm text-gray-600">
-                    <i class="fas fa-info-circle"></i> Tombol akan aktif setelah semua field wajib diisi dengan benar
+                    <i class="fas fa-info-circle"></i> Tombol akan aktif setelah semua field bertanda <span
+                        class="font-bold text-red-500">*</span> (wajib) diisi dengan benar
                 </p>
             </div>
         </form>
@@ -664,8 +725,8 @@
                                 <i class="text-xl fas fa-chart-bar"></i>
                             </div>
                             <div class="text-left">
-                                <h4 class="text-sm font-semibold text-dark-brown">BPS Kota Tanjungpinang</h4>
-                                <p class="text-xs text-light-brown">Badan Pusat Statistik</p>
+                                <h4 class="text-sm font-semibold text-dark-brown">Badan Pusat Statistik</h4>
+                                <p class="text-xs text-light-brown">Kota Tanjungpinang</p>
                             </div>
                         </div>
 
@@ -680,6 +741,23 @@
                             <p class="mt-1 text-xs text-light-brown">
                                 Harmonisasi Jelang Sensus Ekonomi 2026
                             </p>
+                        </div>
+
+                        <!-- Divider -->
+                        <div class="hidden w-px h-8 md:block bg-light-brown/30"></div>
+
+                        <!-- Social Media -->
+                        <div class="flex flex-col gap-2">
+                            <a href="https://instagram.com/bps_tanjungpinang" target="_blank"
+                                class="flex items-center gap-2 px-3 py-1 text-xs transition-colors rounded-full text-light-brown hover:text-primary-orange hover:bg-primary-orange/10">
+                                <i class="fab fa-instagram"></i>
+                                <span>@bps_tanjungpinang</span>
+                            </a>
+                            <a href="http://wa.me/6281363228686" target="_blank"
+                                class="flex items-center gap-2 px-3 py-1 text-xs transition-colors rounded-full text-light-brown hover:text-green-600 hover:bg-green-50">
+                                <i class="fab fa-whatsapp"></i>
+                                <span>081363228686</span>
+                            </a>
                         </div>
                     </div>
 
@@ -840,12 +918,12 @@
         const cancelSubmit = document.getElementById('cancelSubmit');
         const confirmSubmit = document.getElementById('confirmSubmit');
 
-        // Geo tagging variables
-        let currentLocation = null;
-        let selectedLocation = null;
+        // Geo tagging variables - RESET SEMUA
         let map = null;
         let marker = null;
-        let isLocationConfirmed = false;
+        let currentLat = null;
+        let currentLng = null;
+        let isConfirmed = false;
 
         // Geo tagging elements
         const getCurrentLocationBtn = document.getElementById('getCurrentLocation');
@@ -865,6 +943,29 @@
 
             // Add form validation listeners
             addFormValidationListeners();
+
+            // Initialize confirm button state
+            if (confirmLocationBtn) {
+                confirmLocationBtn.disabled = true;
+                confirmLocationBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+
+            // EVENT LISTENERS - SIMPLE & CLEAN
+            getCurrentLocationBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Detect location button clicked'); // Debug
+                detectLocation();
+            });
+
+            confirmLocationBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Confirm location button clicked'); // Debug
+                confirmLocationManually();
+            });
+
+            // Add event listener for jumlah pekerja to check warning
+            jumlahPekerjaInput.addEventListener('input', checkWarning);
+            jumlahPekerjaInput.addEventListener('change', checkWarning);
 
             // Initial validation check
             setTimeout(updateSubmitButton, 100);
@@ -922,10 +1023,8 @@
 
         formatCurrency(omzetInput);
 
-        // Format phone number with strict validation
+        // Format phone number with strict validation (NOW REQUIRED)
         function formatPhoneNumber(input) {
-            let isValid = false;
-
             input.addEventListener('input', function() {
                 let value = this.value.replace(/[^\d]/g, '');
 
@@ -967,6 +1066,7 @@
             phoneErrorElement.classList.add('hidden');
 
             if (!value) {
+                // Empty is not valid anymore (required field)
                 input.classList.add('error-border');
                 phoneErrorElement.textContent = 'Nomor handphone wajib diisi';
                 phoneErrorElement.classList.remove('hidden');
@@ -1031,12 +1131,12 @@
 
         // Phone validation state
         const phoneValidationState = {
-            isValid: false
+            isValid: false // Default to false since it's required now
         };
 
         formatPhoneNumber(handphoneInput);
 
-        // Format RT/RW to 3-digit
+        // Format RT/RW to 3-digit (still optional)
         function formatRTRW(input) {
             input.addEventListener('input', function(e) {
                 let value = this.value.replace(/[^\d]/g, '');
@@ -1065,26 +1165,35 @@
             const omzetValue = omzetInput.value.replace(/[^\d]/g, '');
             const pekerjaValue = jumlahPekerjaInput.value;
 
-            if (omzetValue && pekerjaValue) {
+            // Check if both have values and are not 0
+            if (omzetValue && pekerjaValue && omzetValue !== '0' && pekerjaValue !== '0') {
                 const omzetNum = parseInt(omzetValue);
                 const pekerjaNum = parseInt(pekerjaValue);
                 const omzetPerPekerja = omzetNum / pekerjaNum;
 
                 if (omzetPerPekerja < 1000000) {
+                    // Show warning
                     omzetWarning.classList.remove('hidden');
                     pekerjaWarning.classList.remove('hidden');
                     omzetInput.classList.add('warning-border');
                     jumlahPekerjaInput.classList.add('warning-border');
                 } else {
+                    // Hide warning
                     omzetWarning.classList.add('hidden');
                     pekerjaWarning.classList.add('hidden');
                     omzetInput.classList.remove('warning-border');
                     jumlahPekerjaInput.classList.remove('warning-border');
                 }
+            } else {
+                // Hide warning when one of the fields is empty or 0
+                omzetWarning.classList.add('hidden');
+                pekerjaWarning.classList.add('hidden');
+                omzetInput.classList.remove('warning-border');
+                jumlahPekerjaInput.classList.remove('warning-border');
             }
         }
 
-        // Add required field validation
+        // Add required field validation (UPDATED FOR NEW REQUIRED FIELDS)
         function validateRequiredFields() {
             const requiredFields = [{
                     id: 'kecamatan',
@@ -1095,14 +1204,6 @@
                     name: 'Kelurahan'
                 },
                 {
-                    id: 'rw',
-                    name: 'RW'
-                },
-                {
-                    id: 'rt',
-                    name: 'RT'
-                },
-                {
                     id: 'alamat',
                     name: 'Alamat'
                 },
@@ -1110,6 +1211,7 @@
                     id: 'namaUsaha',
                     name: 'Nama Kedai'
                 },
+                // NEW REQUIRED FIELDS
                 {
                     id: 'namaPemilik',
                     name: 'Nama Pemilik'
@@ -1145,16 +1247,21 @@
 
             requiredFields.forEach(field => {
                 const element = document.getElementById(field.id);
-                if (!element.value.trim()) {
+                if (!element || !element.value.trim()) {
                     allValid = false;
                     errors.push(field.name + ' wajib diisi');
-                    // Don't add red border automatically
                 }
             });
 
             // Special validation for phone number
             if (!phoneValidationState.isValid) {
                 allValid = false;
+            }
+
+            // Check if location is confirmed (WAJIB)
+            if (!isConfirmed) {
+                allValid = false;
+                errors.push('Lokasi GPS wajib dikonfirmasi');
             }
 
             return {
@@ -1206,10 +1313,18 @@
                 return;
             }
 
+            // Check if location is confirmed
+            if (!isConfirmed) {
+                alert('Lokasi GPS wajib dikonfirmasi. Mohon tekan tombol "Deteksi Lokasi Saya" terlebih dahulu.');
+                getCurrentLocationBtn.focus();
+                return;
+            }
+
             const omzetValue = omzetInput.value.replace(/[^\d]/g, '');
             const pekerjaValue = jumlahPekerjaInput.value;
 
-            if (omzetValue && pekerjaValue) {
+            // Show warning if omzet per pekerja is too low
+            if (omzetValue && pekerjaValue && omzetValue !== '0' && pekerjaValue !== '0') {
                 const omzetNum = parseInt(omzetValue);
                 const pekerjaNum = parseInt(pekerjaValue);
                 const omzetPerPekerja = omzetNum / pekerjaNum;
@@ -1233,243 +1348,201 @@
             document.getElementById('businessForm').submit();
         });
 
-        // Initialize Leaflet map
-        function initializeMap(lat, lng) {
-            if (map) {
-                map.remove();
-                map = null;
-            }
-
-            const defaultLat = lat || 0.9171;
-            const defaultLng = lng || 104.4448;
-
-            map = L.map('map', {
-                center: [defaultLat, defaultLng],
-                zoom: lat ? 16 : 13,
-                zoomControl: true,
-                scrollWheelZoom: true,
-                doubleClickZoom: false,
-                dragging: true
-            });
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 19
-            }).addTo(map);
-
-            const customIcon = L.divIcon({
-                className: 'custom-marker',
-                html: '<i class="fas fa-map-marker-alt" style="color: #f5cf76; font-size: 16px;"></i>',
-                iconSize: [30, 30],
-                iconAnchor: [15, 30],
-                popupAnchor: [0, -30]
-            });
-
-            marker = L.marker([defaultLat, defaultLng], {
-                icon: customIcon,
-                draggable: true,
-                riseOnHover: true
-            }).addTo(map);
-
-            marker.bindPopup(`
-                <div style="text-align: center; min-width: 200px;">
-                    <strong style="color: #3f1000;">☕ Lokasi Kedai Kopi</strong><br>
-                    <small style="color: #581908;">Geser pin untuk mengatur lokasi</small><br>
-                    <small style="color: #e44012;">Lat: ${defaultLat.toFixed(6)}<br>Lng: ${defaultLng.toFixed(6)}</small>
-                </div>
-            `);
-
-            marker.on('dragend', function(e) {
-                const position = e.target.getLatLng();
-                selectedLocation = {
-                    lat: position.lat,
-                    lng: position.lng
-                };
-                updateCoordinates();
-                updateMarkerPopup();
-                isLocationConfirmed = false;
-                updateConfirmButton();
-            });
-
-            map.on('click', function(e) {
-                const position = e.latlng;
-                selectedLocation = {
-                    lat: position.lat,
-                    lng: position.lng
-                };
-                marker.setLatLng([position.lat, position.lng]);
-                updateCoordinates();
-                updateMarkerPopup();
-                isLocationConfirmed = false;
-                updateConfirmButton();
-            });
-
-            selectedLocation = {
-                lat: defaultLat,
-                lng: defaultLng
-            };
-            updateCoordinates();
-            updateConfirmButton();
-        }
-
-        function updateMarkerPopup() {
-            if (marker && selectedLocation) {
-                const status = isLocationConfirmed ?
-                    '<small style="color: #28a745; font-weight: 500;">✓ Lokasi dikonfirmasi</small>' :
-                    '<small style="color: #f59e0b; font-weight: 500;">⚠ Belum dikonfirmasi</small>';
-
-                marker.bindPopup(`
-                    <div style="text-align: center; min-width: 200px;">
-                        <strong style="color: #3f1000;">☕ Lokasi Kedai Kopi</strong><br>
-                        ${status}<br>
-                        <small style="color: #e44012;">Lat: ${selectedLocation.lat.toFixed(6)}<br>Lng: ${selectedLocation.lng.toFixed(6)}</small>
-                    </div>
-                `);
-            }
-        }
-
-        function updateConfirmButton() {
-            if (selectedLocation && !isLocationConfirmed) {
-                confirmLocationBtn.disabled = false;
-                confirmLocationBtn.innerHTML = '<i class="mr-2 fas fa-check-circle"></i> Konfirmasi Lokasi';
-                confirmLocationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            } else if (isLocationConfirmed) {
-                confirmLocationBtn.innerHTML = '<i class="mr-2 fas fa-check-circle"></i> Lokasi Dikonfirmasi';
-                confirmLocationBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            } else {
-                confirmLocationBtn.disabled = true;
-                confirmLocationBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            }
-        }
-
-        function getCurrentLocation() {
+        // ALGORITMA BARU - SIMPLE & CLEAN
+        function detectLocation() {
+            // Update UI
             getCurrentLocationBtn.disabled = true;
-            getCurrentLocationBtn.innerHTML = '<i class="mr-2 fas fa-spinner fa-spin"></i> Mencari Lokasi...';
+            getCurrentLocationBtn.textContent = 'Mencari Lokasi...';
 
-            if (!navigator.geolocation) {
-                showLocationError('Geolocation tidak didukung oleh browser ini.');
-                return;
-            }
-
+            // Get GPS location
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const newLocation = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    };
+                function(position) {
+                    // Simpan koordinat
+                    currentLat = position.coords.latitude;
+                    currentLng = position.coords.longitude;
 
-                    currentLocation = newLocation;
-                    selectedLocation = {
-                        ...newLocation
-                    };
-                    isLocationConfirmed = false;
+                    // LANGSUNG KONFIRMASI (sesuai requirement)
+                    isConfirmed = true;
+                    saveLocationToForm();
 
-                    if (map && marker) {
-                        map.setView([newLocation.lat, newLocation.lng], 17);
-                        marker.setLatLng([newLocation.lat, newLocation.lng]);
-                        updateCoordinates();
-                        updateMarkerPopup();
-                        marker.openPopup();
-                    } else {
-                        showMap();
-                    }
-                    updateConfirmButton();
-                    showLocationSuccess();
+                    // Show map
+                    showMapWithLocation();
+
+                    // Update UI - SUCCESS
+                    getCurrentLocationBtn.disabled = false;
+                    getCurrentLocationBtn.textContent = 'Deteksi Ulang';
+                    confirmLocationBtn.disabled = true;
+                    confirmLocationBtn.textContent = 'Lokasi Dikonfirmasi';
+
+                    locationInfo.className =
+                        'flex items-center gap-3 p-4 mb-4 text-sm text-green-800 bg-green-50 rounded-xl border border-green-200';
+                    locationInfo.innerHTML =
+                        '<i class="text-lg fas fa-check-circle"></i> <span>Lokasi berhasil dikonfirmasi dan disimpan!</span>';
+
+                    updateSubmitButton();
                 },
-                (error) => {
-                    showLocationError('Gagal mendapatkan lokasi. Silakan coba lagi.');
-                    if (!map) showMap();
+                function(error) {
+                    // Update UI - ERROR
+                    getCurrentLocationBtn.disabled = false;
+                    getCurrentLocationBtn.textContent = 'Deteksi Lokasi Saya';
+
+                    locationInfo.className =
+                        'flex items-center gap-3 p-4 mb-4 text-sm text-red-800 bg-red-50 rounded-xl border border-red-200';
+                    locationInfo.innerHTML =
+                        '<i class="text-lg fas fa-exclamation-triangle"></i> <span>Gagal mendapatkan lokasi. Silakan coba lagi.</span>';
+                }, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
                 }
             );
         }
 
-        function confirmLocation() {
-            if (selectedLocation && !isLocationConfirmed) {
-                isLocationConfirmed = true;
-                addHiddenInputs();
-                updateConfirmButton();
-                updateMarkerPopup();
+        function showMapWithLocation() {
+            // Show map container
+            mapContainer.classList.remove('hidden');
+            coordinatesDisplay.classList.remove('hidden');
+
+            // Initialize map jika belum ada
+            if (!map) {
+                map = L.map('map').setView([currentLat, currentLng], 16);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+                // Custom marker
+                const customIcon = L.divIcon({
+                    className: 'custom-marker',
+                    html: '<i class="fas fa-map-marker-alt" style="color: #f5cf76; font-size: 16px;"></i>',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                });
+
+                marker = L.marker([currentLat, currentLng], {
+                    icon: customIcon,
+                    draggable: true
+                }).addTo(map);
+
+                // Event saat marker digeser
+                marker.on('dragend', function(e) {
+                    const pos = e.target.getLatLng();
+                    currentLat = pos.lat;
+                    currentLng = pos.lng;
+
+                    console.log('Marker dragged to:', currentLat, currentLng); // Debug
+
+                    // Reset confirmation
+                    isConfirmed = false;
+
+                    // Update UI - HARUS KONFIRMASI
+                    confirmLocationBtn.disabled = false;
+                    confirmLocationBtn.textContent = 'Konfirmasi Lokasi';
+                    confirmLocationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                    locationInfo.className =
+                        'flex items-center gap-3 p-4 mb-4 text-sm text-blue-800 bg-blue-50 rounded-xl border border-blue-200';
+                    locationInfo.innerHTML =
+                        '<i class="text-lg fas fa-info-circle"></i> <span>Lokasi diubah! Klik "Konfirmasi Lokasi" untuk menyimpan.</span>';
+
+                    updateCoordinatesDisplay();
+                    updateSubmitButton();
+                });
+
+                // Event saat map diklik
+                map.on('click', function(e) {
+                    currentLat = e.latlng.lat;
+                    currentLng = e.latlng.lng;
+                    marker.setLatLng([currentLat, currentLng]);
+
+                    console.log('Map clicked at:', currentLat, currentLng); // Debug
+
+                    // Reset confirmation
+                    isConfirmed = false;
+
+                    // Update UI - HARUS KONFIRMASI
+                    confirmLocationBtn.disabled = false;
+                    confirmLocationBtn.textContent = 'Konfirmasi Lokasi';
+                    confirmLocationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                    locationInfo.className =
+                        'flex items-center gap-3 p-4 mb-4 text-sm text-blue-800 bg-blue-50 rounded-xl border border-blue-200';
+                    locationInfo.innerHTML =
+                        '<i class="text-lg fas fa-info-circle"></i> <span>Lokasi diubah! Klik "Konfirmasi Lokasi" untuk menyimpan.</span>';
+
+                    updateCoordinatesDisplay();
+                    updateSubmitButton();
+                });
+            } else {
+                // Update existing map
+                map.setView([currentLat, currentLng], 16);
+                marker.setLatLng([currentLat, currentLng]);
+            }
+
+            updateCoordinatesDisplay();
+
+            // Resize map
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 300);
+        }
+
+        function confirmLocationManually() {
+            console.log('Confirm button clicked!'); // Debug
+            console.log('Current coords:', currentLat, currentLng, 'Confirmed:', isConfirmed);
+
+            if (currentLat && currentLng && !isConfirmed) {
+                console.log('Confirming location...'); // Debug
+
+                // Konfirmasi
+                isConfirmed = true;
+                saveLocationToForm();
+
+                // Update UI - SUCCESS
+                confirmLocationBtn.disabled = true;
+                confirmLocationBtn.textContent = 'Lokasi Dikonfirmasi';
+                confirmLocationBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
                 locationInfo.className =
                     'flex items-center gap-3 p-4 mb-4 text-sm text-green-800 bg-green-50 rounded-xl border border-green-200';
                 locationInfo.innerHTML =
                     '<i class="text-lg fas fa-check-circle"></i> <span>Lokasi berhasil dikonfirmasi dan disimpan!</span>';
 
-                // Show popup confirmation
-                if (marker) {
-                    marker.openPopup();
-                }
+                updateSubmitButton();
+
+                console.log('Location confirmed successfully!'); // Debug
+            } else {
+                console.log('Cannot confirm - missing data or already confirmed'); // Debug
             }
         }
 
-        function showLocationSuccess() {
-            getCurrentLocationBtn.disabled = false;
-            getCurrentLocationBtn.innerHTML = '<i class="mr-2 fas fa-crosshairs"></i> Deteksi Ulang';
-
-            locationInfo.className =
-                'flex items-center gap-3 p-4 mb-4 text-sm text-blue-800 bg-blue-50 rounded-xl border border-blue-200';
-            locationInfo.innerHTML =
-                '<i class="text-lg fas fa-info-circle"></i> <span>Lokasi ditemukan! Klik "Konfirmasi Lokasi" untuk menyimpan.</span>';
-        }
-
-        function showLocationError(message) {
-            getCurrentLocationBtn.disabled = false;
-            getCurrentLocationBtn.innerHTML = '<i class="mr-2 fas fa-crosshairs"></i> Coba Lagi';
-
-            locationInfo.className =
-                'flex items-center gap-3 p-4 mb-4 text-sm text-red-800 bg-red-50 rounded-xl border border-red-200';
-            locationInfo.innerHTML = `<i class="text-lg fas fa-exclamation-triangle"></i> <span>${message}</span>`;
-        }
-
-        function showMap() {
-            mapContainer.classList.remove('hidden');
-            coordinatesDisplay.classList.remove('hidden');
-
-            const lat = selectedLocation ? selectedLocation.lat : null;
-            const lng = selectedLocation ? selectedLocation.lng : null;
-
-            initializeMap(lat, lng);
-
-            setTimeout(() => {
-                map.invalidateSize();
-            }, 600);
-        }
-
-        function updateCoordinates() {
-            if (selectedLocation) {
-                latValue.textContent = selectedLocation.lat.toFixed(6);
-                lngValue.textContent = selectedLocation.lng.toFixed(6);
+        function updateCoordinatesDisplay() {
+            if (currentLat && currentLng) {
+                latValue.textContent = currentLat.toFixed(6);
+                lngValue.textContent = currentLng.toFixed(6);
             }
         }
 
-        function addHiddenInputs() {
-            if (!selectedLocation || !isLocationConfirmed) return;
+        function saveLocationToForm() {
+            if (!currentLat || !currentLng || !isConfirmed) return;
 
-            // Remove existing hidden inputs
-            const existingLatInput = document.querySelector('input[name="latitude"]');
-            const existingLngInput = document.querySelector('input[name="longitude"]');
+            // Remove existing inputs
+            const existingLat = document.querySelector('input[name="latitude"]');
+            const existingLng = document.querySelector('input[name="longitude"]');
+            if (existingLat) existingLat.remove();
+            if (existingLng) existingLng.remove();
 
-            if (existingLatInput) existingLatInput.remove();
-            if (existingLngInput) existingLngInput.remove();
+            // Add new inputs
+            const latInput = document.createElement('input');
+            latInput.type = 'hidden';
+            latInput.name = 'latitude';
+            latInput.value = currentLat;
 
-            // Add new hidden inputs
-            const hiddenLatInput = document.createElement('input');
-            hiddenLatInput.type = 'hidden';
-            hiddenLatInput.name = 'latitude';
-            hiddenLatInput.value = selectedLocation.lat;
+            const lngInput = document.createElement('input');
+            lngInput.type = 'hidden';
+            lngInput.name = 'longitude';
+            lngInput.value = currentLng;
 
-            const hiddenLngInput = document.createElement('input');
-            hiddenLngInput.type = 'hidden';
-            hiddenLngInput.name = 'longitude';
-            hiddenLngInput.value = selectedLocation.lng;
-
-            document.getElementById('businessForm').appendChild(hiddenLatInput);
-            document.getElementById('businessForm').appendChild(hiddenLngInput);
+            document.getElementById('businessForm').appendChild(latInput);
+            document.getElementById('businessForm').appendChild(lngInput);
         }
-
-        // Event listeners
-        getCurrentLocationBtn.addEventListener('click', getCurrentLocation);
-        confirmLocationBtn.addEventListener('click', confirmLocation);
     </script>
 </body>
 
