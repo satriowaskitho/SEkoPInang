@@ -5,28 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitor Kedai Kopi - SEkoPinang</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Compiled Assets (Tailwind via Vite) -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        'poppins': ['Poppins', 'sans-serif'],
-                    },
-                    colors: {
-                        'primary-orange': '#e44012',
-                        'bright-orange': '#f58741',
-                        'cream-yellow': '#f5cf76',
-                        'light-brown': '#8e4917',
-                        'medium-brown': '#581908',
-                        'dark-brown': '#3f1000'
-                    }
-                }
-            }
-        }
-    </script>
+
     <style>
         .bg-pattern {
             background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e44012' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
