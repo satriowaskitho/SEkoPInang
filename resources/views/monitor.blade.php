@@ -128,7 +128,11 @@
                             <div class="ml-4">
                                 <dt class="text-sm font-medium text-medium-brown">Total Kedai Kopi</dt>
                                 <dd class="text-2xl font-bold text-dark-brown">{{ number_format($totalKedai) }}</dd>
-                                <dd class="text-xs text-medium-brown">Terdaftar</dd>
+                                <dd class="text-xs text-medium-brown">
+                                    <span class="text-primary-orange font-medium">{{ $totalMandiri }} Mandiri</span>
+                                    &bull;
+                                    <span class="text-light-brown font-medium">{{ $totalMitra }} Mitra</span>
+                                </dd>
                             </div>
                         </div>
                     </div>
@@ -274,10 +278,9 @@
                             // Hitung data kedai per kelurahan dari SEMUA data, bukan hanya halaman saat ini
                             $kedaiPerKelurahan = collect();
 
-                            // SESUDAH (✅ Benar):
+                            // Hitung data kedai per kelurahan dari SEMUA data (mandiri + mitra)
                             $allKedaiByKelurahan = DB::table('kedai_kopi')
                                 ->whereNull('deleted_at')
-                                ->where('sumber', 'mandiri') // ✅ Tambahkan filter sumber yang sama
                                 ->select('kode_kecamatan', 'kode_kelurahan', DB::raw('count(*) as total'))
                                 ->groupBy('kode_kecamatan', 'kode_kelurahan')
                                 ->get();
@@ -425,7 +428,7 @@
 
                     <!-- Filter dan Search -->
                     <form method="GET" action="{{ route('monitor') }}" class="mb-6">
-                        <div class="grid grid-cols-1 gap-4 p-4 rounded-lg md:grid-cols-4 bg-cream-yellow/10">
+                        <div class="grid grid-cols-1 gap-4 p-4 rounded-lg md:grid-cols-5 bg-cream-yellow/10">
                             <div>
                                 <label class="block mb-1 text-xs font-medium text-dark-brown">Search Nama Kedai</label>
                                 <input type="text" name="search" value="{{ $search }}"
@@ -462,6 +465,15 @@
                                     <option value="1" {{ $lokasi == '1' ? 'selected' : '' }}>Ada Lokasi</option>
                                     <option value="0" {{ $lokasi == '0' ? 'selected' : '' }}>Tanpa Lokasi
                                     </option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block mb-1 text-xs font-medium text-dark-brown">Sumber Data</label>
+                                <select name="sumber"
+                                    class="w-full px-3 py-2 text-sm border rounded-lg border-light-brown/30 focus:ring-2 focus:ring-primary-orange focus:border-transparent">
+                                    <option value="">Semua Sumber</option>
+                                    <option value="mandiri" {{ $sumber == 'mandiri' ? 'selected' : '' }}>Input Mandiri</option>
+                                    <option value="mitra" {{ $sumber == 'mitra' ? 'selected' : '' }}>Input Mitra</option>
                                 </select>
                             </div>
                         </div>
@@ -529,6 +541,22 @@
                                         <th
                                             class="px-4 py-3 text-xs font-medium tracking-wider text-center uppercase text-dark-brown">
                                             Lokasi GPS</th>
+                                        <th
+                                            class="px-4 py-3 text-xs font-medium tracking-wider text-center uppercase text-dark-brown">
+                                            <a href="{{ request()->fullUrlWithQuery(['sort' => 'sumber', 'direction' => $sortBy == 'sumber' && $sortDir == 'asc' ? 'desc' : 'asc', 'page' => 1]) }}"
+                                                class="flex items-center justify-center hover:text-primary-orange transition-colors {{ $sortBy == 'sumber' ? 'text-primary-orange bg-primary-orange/10 px-2 py-1 rounded' : '' }}">
+                                                Sumber
+                                                @if ($sortBy == 'sumber')
+                                                    <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        @if ($sortDir == 'asc')
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                                        @else
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                        @endif
+                                                    </svg>
+                                                @endif
+                                            </a>
+                                        </th>
                                         <th
                                             class="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-dark-brown">
                                             <a href="{{ request()->fullUrlWithQuery(['sort' => 'created_at', 'direction' => $sortBy == 'created_at' && $sortDir == 'asc' ? 'desc' : 'asc', 'page' => 1]) }}"
@@ -608,6 +636,17 @@
                                                                 stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                                         </svg>
                                                         Tidak Ada
+                                                    </span>
+                                                @endif
+                                            </td>
+                                            <td class="px-4 py-3 text-center whitespace-nowrap">
+                                                @if ($kedai->sumber === 'mitra')
+                                                    <span class="inline-flex items-center px-2 py-1 text-xs font-semibold text-white rounded-full bg-light-brown">
+                                                        Mitra
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full text-primary-orange bg-primary-orange/10">
+                                                        Mandiri
                                                     </span>
                                                 @endif
                                             </td>

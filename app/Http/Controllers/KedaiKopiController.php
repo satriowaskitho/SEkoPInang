@@ -363,20 +363,22 @@ class KedaiKopiController extends Controller
     }
 
     /**
-     * Display public monitoring dashboard - ONLY MANDIRI DATA.
+     * Display public monitoring dashboard - MANDIRI + MITRA DATA.
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function monitor(Request $request)
     {
-        // Get statistics using mandiri-only method
+        // Get statistics from ALL data (mandiri + mitra)
         $stats = $this->getStatisticsForMonitor();
         $totalKedai = $stats['total_kedai'];
         $totalPekerja = $stats['total_pekerja'];
         $avgOmzet = $stats['avg_omzet'];
         $kedaiWithLocation = $stats['kedai_with_location'];
         $kedaiByKecamatan = $stats['kedai_by_kecamatan'];
+        $totalMandiri = $stats['kedai_mandiri'];
+        $totalMitra = $stats['kedai_mitra'];
 
         $kecamatanNames = [
             '010' => 'Bukit Bestari',
@@ -394,13 +396,13 @@ class KedaiKopiController extends Controller
         $kecamatan = $this->ensureString($request->get('kecamatan'));
         $kelurahan = $this->ensureString($request->get('kelurahan'));
         $lokasi = $this->ensureString($request->get('lokasi'));
-        // Removed sumber filter since we only show mandiri data
+        $sumber = $this->ensureString($request->get('sumber')); // Filter sumber (mandiri/mitra/semua)
         $sortBy = $this->ensureString($request->get('sort', 'created_at'));
         $sortDir = $this->ensureString($request->get('direction', 'desc'));
         $currentPage = (int) $request->get('page', 1);
-        $perPage = 15; // Sedikit lebih kecil untuk public
+        $perPage = 15;
 
-        // Query dengan filter dan sort (PUBLIC VERSION - ONLY MANDIRI DATA)
+        // Query dengan filter dan sort (PUBLIC VERSION - MANDIRI + MITRA)
         $query = KedaiKopi::select([
             'id',
             'nama_kedai',
@@ -419,12 +421,12 @@ class KedaiKopiController extends Controller
             'jenis_kelamin',
             'sumber'
             // Exclude: nama_pemilik, handphone (sensitive data)
-        ])->where('sumber', 'mandiri'); // ONLY MANDIRI DATA
+        ]);
+        // No sumber filter by default — show all
 
-        // Apply same filters as dashboard (except sumber)
+        // Apply filters
         if ($search) {
             $query->where('nama_kedai', 'like', "%{$search}%");
-            // Remove nama_pemilik search for privacy
         }
 
         if ($kecamatan) {
@@ -445,8 +447,13 @@ class KedaiKopiController extends Controller
             }
         }
 
+        // Filter sumber (opsional)
+        if ($sumber !== '') {
+            $query->where('sumber', $sumber);
+        }
+
         // Apply sorting
-        $validSorts = ['nama_kedai', 'omzet', 'jumlah_pekerja', 'stan_sewa', 'created_at'];
+        $validSorts = ['nama_kedai', 'omzet', 'jumlah_pekerja', 'stan_sewa', 'created_at', 'sumber'];
         if (in_array($sortBy, $validSorts)) {
             $query->orderBy($sortBy, $sortDir);
         }
@@ -468,7 +475,7 @@ class KedaiKopiController extends Controller
             // Add kecamatan name
             $kedai->kecamatan_name = $kecamatanNames[$kedai->kode_kecamatan] ?? 'Unknown';
 
-            // Add kelurahan name (you might want to create a helper for this)
+            // Add kelurahan name
             $kedai->kelurahan_name = $this->getKelurahanName($kedai->kode_kecamatan, $kedai->kode_kelurahan);
 
             // Format omzet - handle null values
@@ -479,14 +486,14 @@ class KedaiKopiController extends Controller
             $kedai->gender_text = $kedai->jenis_kelamin ?
                 ($kedai->jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan') : 'Tidak diisi';
 
-            // Sumber text - always mandiri for monitor
-            $kedai->sumber_text = 'Input Mandiri';
+            // Sumber text
+            $kedai->sumber_text = $kedai->sumber === 'mitra' ? 'Input Mitra' : 'Input Mandiri';
 
             return $kedai;
         });
 
-        // Get latest data update timestamp from MANDIRI data only
-        $latestDataUpdate = KedaiKopi::where('sumber', 'mandiri')->latest('created_at')->first();
+        // Get latest data update timestamp from ALL data
+        $latestDataUpdate = KedaiKopi::latest('created_at')->first();
         $lastUpdateTime = $latestDataUpdate ? $latestDataUpdate->created_at : null;
 
         return view('monitor', compact(
@@ -502,7 +509,9 @@ class KedaiKopiController extends Controller
             'kecamatan',
             'kelurahan',
             'lokasi',
-            // Removed 'sumber' since we only show mandiri
+            'sumber',
+            'totalMandiri',
+            'totalMitra',
             'sortBy',
             'sortDir',
             'currentPage',
@@ -516,29 +525,27 @@ class KedaiKopiController extends Controller
     }
 
     /**
-     * Get statistics for public monitor (MANDIRI DATA ONLY).
+     * Get statistics for public monitor (MANDIRI + MITRA DATA).
      *
      * @return array
      */
     public function getStatisticsForMonitor()
     {
         $stats = [
-            'total_kedai' => KedaiKopi::where('sumber', 'mandiri')->count(),
-            'total_pekerja' => KedaiKopi::where('sumber', 'mandiri')->whereNotNull('jumlah_pekerja')->sum('jumlah_pekerja'),
-            'total_omzet' => KedaiKopi::where('sumber', 'mandiri')->whereNotNull('omzet')->sum('omzet'),
-            'total_stan_sewa' => KedaiKopi::where('sumber', 'mandiri')->whereNotNull('stan_sewa')->sum('stan_sewa'),
-            'avg_omzet' => KedaiKopi::where('sumber', 'mandiri')->whereNotNull('omzet')->where('omzet', '>', 0)->avg('omzet'),
-            'avg_pekerja' => KedaiKopi::where('sumber', 'mandiri')->whereNotNull('jumlah_pekerja')->where('jumlah_pekerja', '>', 0)->avg('jumlah_pekerja'),
-            'kedai_by_kecamatan' => KedaiKopi::where('sumber', 'mandiri')->selectRaw('kode_kecamatan, COUNT(*) as total')
+            'total_kedai' => KedaiKopi::count(),
+            'total_pekerja' => KedaiKopi::whereNotNull('jumlah_pekerja')->sum('jumlah_pekerja'),
+            'total_omzet' => KedaiKopi::whereNotNull('omzet')->sum('omzet'),
+            'total_stan_sewa' => KedaiKopi::whereNotNull('stan_sewa')->sum('stan_sewa'),
+            'avg_omzet' => KedaiKopi::whereNotNull('omzet')->where('omzet', '>', 0)->avg('omzet'),
+            'avg_pekerja' => KedaiKopi::whereNotNull('jumlah_pekerja')->where('jumlah_pekerja', '>', 0)->avg('jumlah_pekerja'),
+            'kedai_by_kecamatan' => KedaiKopi::selectRaw('kode_kecamatan, COUNT(*) as total')
                 ->groupBy('kode_kecamatan')
                 ->get(),
-            'kedai_with_location' => KedaiKopi::where('sumber', 'mandiri')
-                ->whereNotNull('latitude')
+            'kedai_with_location' => KedaiKopi::whereNotNull('latitude')
                 ->whereNotNull('longitude')
                 ->count(),
-            // Only mandiri stats for monitor
             'kedai_mandiri' => KedaiKopi::where('sumber', 'mandiri')->count(),
-            'kedai_mitra' => 0, // Not shown in monitor but kept for compatibility
+            'kedai_mitra' => KedaiKopi::where('sumber', 'mitra')->count(),
         ];
 
         return $stats;
