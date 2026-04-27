@@ -16,3 +16,7 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# Database dumps & temp files
+database/*.sql
+import_data.php

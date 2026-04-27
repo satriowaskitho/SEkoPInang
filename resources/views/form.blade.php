@@ -9,8 +9,8 @@
     <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
     <link rel="shortcut icon" href="{{ asset('images/logo.png') }}">
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Compiled Assets (Tailwind via Vite) -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <!-- Flowbite CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.1/flowbite.min.css" rel="stylesheet" />
@@ -25,26 +25,7 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 
-    <!-- Tailwind Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'primary-orange': '#e44012',
-                        'dark-brown': '#3f1000',
-                        'medium-brown': '#581908',
-                        'light-brown': '#8e4917',
-                        'cream-yellow': '#f5cf76',
-                        'bright-orange': '#f58741',
-                    },
-                    fontFamily: {
-                        'poppins': ['Poppins', 'sans-serif'],
-                    },
-                }
-            }
-        }
-    </script>
+
 
     <style>
         body {

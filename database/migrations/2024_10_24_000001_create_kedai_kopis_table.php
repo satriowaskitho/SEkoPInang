@@ -28,19 +28,20 @@ return new class extends Migration
 
             // Business Information
             $table->string('nama_kedai');
-            $table->string('nama_pemilik');
-            $table->enum('jenis_kelamin', ['L', 'P']);
-            $table->string('handphone');
-            $table->bigInteger('omzet'); // Stored as integer (rupiah)
-            $table->integer('jumlah_pekerja');
+            $table->string('nama_pemilik')->nullable();
+            $table->enum('jenis_kelamin', ['L', 'P'])->nullable();
+            $table->string('handphone')->nullable();
+            $table->bigInteger('omzet')->nullable(); // Stored as integer (rupiah)
+            $table->integer('jumlah_pekerja')->nullable();
 
             // Stand Information
-            $table->integer('stan_sewa')->default(0);
+            $table->integer('stan_sewa')->nullable()->default(0);
+            $table->integer('total_stan')->nullable()->default(0);
             $table->enum('tren_pekerja', ['naik', 'turun', 'tetap'])->nullable();
 
             // Additional Information
             $table->text('catatan')->nullable();
-            $table->enum('sumber', ['mandiri', 'mitra'])->default('mandiri'); // From model
+            $table->enum('sumber', ['mandiri', 'mitra'])->default('mandiri')->nullable(); // From model
 
             $table->timestamps();
             $table->softDeletes();
